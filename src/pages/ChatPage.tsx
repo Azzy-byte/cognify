@@ -124,11 +124,35 @@ const ChatPage = () => {
       setMessages([...newMessages, assistantMsg]);
       setTyping(false);
 
-      // Handle navigation actions
+      // Handle assistant actions
       if (response.action?.type === 'navigate' && response.action.payload?.path) {
         setTimeout(() => {
           navigate(response.action!.payload!.path as string);
-        }, 1500);
+        }, 900);
+      }
+
+      if (response.action?.type === 'add_reminder') {
+        const title = String(response.action.payload?.title || '').trim();
+        const time = String(response.action.payload?.time || '').trim();
+        if (title && time) {
+          addReminder({
+            title,
+            time,
+            date: new Date().toISOString().split('T')[0],
+            category: 'routine',
+            repeat: true,
+            completed: false,
+          });
+          addAuditEntry({
+            timestamp: new Date().toISOString(),
+            actor_id: currentUser.id,
+            actor_name: `${currentUser.name} (${currentUser.role})`,
+            action_type: 'reminder_created_via_chat',
+            target_type: 'reminder',
+            target_id: '',
+            new_value: { title, time },
+          });
+        }
       }
     }, 600 + Math.random() * 400);
 
