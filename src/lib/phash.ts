@@ -37,7 +37,7 @@ const cropCenterSquare = (canvas: HTMLCanvasElement) => {
 };
 
 const tryCropPrimaryFace = async (canvas: HTMLCanvasElement) => {
-  const FaceDetectorCtor = (window as unknown as { FaceDetector?: new (opts?: { fastMode?: boolean; maxDetectedFaces?: number }) => { detect: (src: HTMLCanvasElement) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }> } }).FaceDetector;
+  const FaceDetectorCtor = (window as unknown as { FaceDetector?: new (opts?: { fastMode?: boolean; maxDetectedFaces?: number }) => { detect: (src: HTMLCanvasElement) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>> } }).FaceDetector;
   if (!FaceDetectorCtor) return cropCenterSquare(canvas);
 
   const detector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 1 });
