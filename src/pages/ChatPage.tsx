@@ -199,7 +199,16 @@ const ChatPage = () => {
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         if (blob.size > 0) {
           const url = URL.createObjectURL(blob);
-          setAudioRecordings(prev => [...prev, { url, blob }]);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+            if (dataUrl) {
+              setAudioRecordings(prev => [...prev, { url, dataUrl }]);
+            } else {
+              URL.revokeObjectURL(url);
+            }
+          };
+          reader.readAsDataURL(blob);
         }
         audioChunksRef.current = [];
         stream.getTracks().forEach(t => t.stop());
