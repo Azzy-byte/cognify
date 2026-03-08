@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { Camera, RotateCcw, User, Check, Trash2, X } from 'lucide-react';
-import { generatePerceptualHash, findMatch, type MatchResult } from '@/lib/phash';
+import { generatePerceptualHash, findMatch, compareHashes, type MatchResult } from '@/lib/phash';
 
 type DerivedMemoryPerson = { id: string; name: string; relationship: string; photo_hashes: string[] };
 
