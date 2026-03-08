@@ -11,74 +11,79 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
   useEffect(() => {
     const blink = () => {
       setBlinking(true);
-      setTimeout(() => setBlinking(false), 110);
+      setTimeout(() => setBlinking(false), 100);
     };
 
     const interval = setInterval(() => {
       blink();
-      if (Math.random() > 0.78) setTimeout(blink, 170);
-    }, 3600 + Math.random() * 1800);
+      if (Math.random() > 0.8) setTimeout(blink, 160);
+    }, 3800 + Math.random() * 1800);
 
     return () => clearInterval(interval);
   }, []);
 
-  const eyeScaleY = blinking ? 0.08 : 1;
+  const eyeScaleY = blinking ? 0.07 : 1;
 
   return (
     <div className="flex flex-col items-center gap-4 py-8">
       <div className="brain-sway" aria-hidden="true">
-        <svg width="210" height="230" viewBox="0 0 210 230" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="105" cy="214" rx="36" ry="7" fill="hsl(var(--foreground) / 0.12)" />
+        <svg width="220" height="230" viewBox="0 0 220 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* ground shadow */}
+          <ellipse cx="110" cy="214" rx="36" ry="7" fill="hsl(var(--foreground) / 0.12)" />
 
-          {/* Legs */}
-          <rect x="80" y="176" width="15" height="26" rx="8" fill="hsl(var(--primary) / 0.28)" />
-          <rect x="115" y="176" width="15" height="26" rx="8" fill="hsl(var(--primary) / 0.28)" />
-          <ellipse cx="86" cy="204" rx="13" ry="7" fill="hsl(var(--primary) / 0.4)" />
-          <ellipse cx="123" cy="204" rx="13" ry="7" fill="hsl(var(--primary) / 0.4)" />
+          {/* legs */}
+          <rect x="92" y="176" width="14" height="24" rx="6" fill="hsl(var(--primary) / 0.34)" />
+          <rect x="114" y="176" width="14" height="24" rx="6" fill="hsl(var(--primary) / 0.34)" />
 
-          {/* Body */}
-          <ellipse cx="105" cy="150" rx="45" ry="34" fill="hsl(var(--secondary))" />
-
-          {/* Arms */}
-          <path d="M62 146C53 152 47 163 50 171C52 176 58 176 61 172C64 166 62 160 67 154" fill="hsl(var(--primary) / 0.28)" />
-          <path d="M148 146C157 152 163 163 160 171C158 176 152 176 149 172C146 166 148 160 143 154" fill="hsl(var(--primary) / 0.28)" />
-          <circle cx="57" cy="171" r="7" fill="hsl(var(--primary) / 0.35)" />
-          <circle cx="153" cy="171" r="7" fill="hsl(var(--primary) / 0.35)" />
-
-          {/* Brain */}
+          {/* brain head (rounded cloud style) */}
           <path
-            d="M105 24C126 12 151 18 165 35C180 36 192 49 192 64C192 71 189 77 185 82C193 92 192 108 181 118C179 133 167 146 151 149H59C43 146 31 133 29 118C18 108 17 92 25 82C21 77 18 71 18 64C18 49 30 36 45 35C59 18 84 12 105 24Z"
+            d="M110 28C122 18 138 18 149 27C163 25 176 35 178 49C189 54 194 65 192 77C196 90 188 103 176 108C169 120 156 126 143 124H77C64 126 51 120 44 108C32 103 24 90 28 77C26 65 31 54 42 49C44 35 57 25 71 27C82 18 98 18 110 28Z"
             fill="hsl(var(--accent))"
           />
 
-          {/* Folds */}
-          <path d="M105 34V78" stroke="hsl(var(--foreground) / 0.2)" strokeWidth="4" strokeLinecap="round" />
-          <path d="M81 42C89 33 99 33 105 43" stroke="hsl(var(--foreground) / 0.2)" strokeWidth="3.5" strokeLinecap="round" />
-          <path d="M129 42C121 33 111 33 105 43" stroke="hsl(var(--foreground) / 0.2)" strokeWidth="3.5" strokeLinecap="round" />
-          <path d="M68 58C79 49 91 52 96 61" stroke="hsl(var(--foreground) / 0.18)" strokeWidth="3" strokeLinecap="round" />
-          <path d="M142 58C131 49 119 52 114 61" stroke="hsl(var(--foreground) / 0.18)" strokeWidth="3" strokeLinecap="round" />
+          {/* center fold */}
+          <path d="M110 31V79" stroke="hsl(var(--primary) / 0.42)" strokeWidth="4" strokeLinecap="round" />
+          <path d="M90 40C98 32 106 32 110 40" stroke="hsl(var(--primary) / 0.42)" strokeWidth="4" strokeLinecap="round" />
+          <path d="M130 40C122 32 114 32 110 40" stroke="hsl(var(--primary) / 0.42)" strokeWidth="4" strokeLinecap="round" />
 
-          {/* Eyes */}
-          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '82px 102px', transition: 'transform 0.1s ease-in-out' }}>
-            <ellipse cx="82" cy="102" rx="12" ry="13" fill="hsl(var(--background))" />
-            <circle cx="84" cy="104" r="5" fill="hsl(var(--foreground) / 0.75)" />
-            <circle cx="86" cy="102" r="1.7" fill="hsl(var(--background))" />
+          {/* ears */}
+          <path d="M46 80C40 86 40 95 46 101" stroke="hsl(var(--primary) / 0.4)" strokeWidth="5" strokeLinecap="round" />
+          <path d="M174 80C180 86 180 95 174 101" stroke="hsl(var(--primary) / 0.4)" strokeWidth="5" strokeLinecap="round" />
+
+          {/* eyebrows */}
+          <path d="M83 88C88 84 96 84 101 88" stroke="hsl(var(--foreground) / 0.6)" strokeWidth="5" strokeLinecap="round" />
+          <path d="M119 88C124 84 132 84 137 88" stroke="hsl(var(--foreground) / 0.6)" strokeWidth="5" strokeLinecap="round" />
+
+          {/* eyes */}
+          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '92px 104px', transition: 'transform 0.09s ease-in-out' }}>
+            <circle cx="92" cy="104" r="16" fill="hsl(var(--background))" />
+            <circle cx="96" cy="107" r="8.5" fill="hsl(var(--foreground) / 0.75)" />
+            <circle cx="99" cy="104" r="3" fill="hsl(var(--background))" />
           </g>
-          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '128px 102px', transition: 'transform 0.1s ease-in-out' }}>
-            <ellipse cx="128" cy="102" rx="12" ry="13" fill="hsl(var(--background))" />
-            <circle cx="130" cy="104" r="5" fill="hsl(var(--foreground) / 0.75)" />
-            <circle cx="132" cy="102" r="1.7" fill="hsl(var(--background))" />
+          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '128px 104px', transition: 'transform 0.09s ease-in-out' }}>
+            <circle cx="128" cy="104" r="16" fill="hsl(var(--background))" />
+            <circle cx="132" cy="107" r="8.5" fill="hsl(var(--foreground) / 0.75)" />
+            <circle cx="135" cy="104" r="3" fill="hsl(var(--background))" />
           </g>
 
-          {/* Brows */}
-          <path d="M72 86C77 82 87 82 92 86" stroke="hsl(var(--foreground) / 0.55)" strokeWidth="2.8" strokeLinecap="round" />
-          <path d="M118 86C123 82 133 82 138 86" stroke="hsl(var(--foreground) / 0.55)" strokeWidth="2.8" strokeLinecap="round" />
+          {/* nose and blush */}
+          <rect x="106" y="116" width="8" height="4" rx="2" fill="hsl(var(--primary) / 0.5)" />
+          <circle cx="72" cy="122" r="3" fill="hsl(var(--primary) / 0.4)" />
+          <circle cx="78" cy="126" r="3" fill="hsl(var(--primary) / 0.4)" />
+          <circle cx="148" cy="122" r="3" fill="hsl(var(--primary) / 0.4)" />
+          <circle cx="142" cy="126" r="3" fill="hsl(var(--primary) / 0.4)" />
 
-          {/* Face */}
-          <ellipse cx="105" cy="118" rx="4.2" ry="3.2" fill="hsl(var(--primary) / 0.5)" />
-          <path d="M95 130C100 136 110 136 115 130" stroke="hsl(var(--foreground) / 0.72)" strokeWidth="2.5" strokeLinecap="round" />
-          <ellipse cx="64" cy="121" rx="8" ry="6" fill="hsl(var(--primary) / 0.26)" />
-          <ellipse cx="146" cy="121" rx="8" ry="6" fill="hsl(var(--primary) / 0.26)" />
+          {/* notepad */}
+          <rect x="92" y="122" width="36" height="54" rx="8" fill="hsl(var(--secondary))" />
+          <rect x="92" y="122" width="36" height="9" rx="5" fill="hsl(var(--primary) / 0.6)" />
+
+          {/* hands */}
+          <ellipse cx="86" cy="146" rx="8" ry="10" fill="hsl(var(--primary) / 0.34)" />
+          <ellipse cx="134" cy="146" rx="8" ry="10" fill="hsl(var(--primary) / 0.34)" />
+
+          {/* pencil */}
+          <rect x="138" y="138" width="7" height="20" rx="2" transform="rotate(-32 138 138)" fill="hsl(var(--accent-foreground) / 0.7)" />
+          <polygon points="151,151 156,153 151,158" fill="hsl(var(--secondary-foreground) / 0.45)" />
         </svg>
       </div>
 
@@ -93,4 +98,5 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
 };
 
 export default BrainCharacter;
+
 
