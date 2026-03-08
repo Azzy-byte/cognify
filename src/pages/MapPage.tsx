@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Trash2, Shield, Navigation as NavIcon, Plus, MapPin, X, Pencil } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Circle, Polyline, Popup, useMap } from 'react-leaflet';
+import { Trash2, Shield, Navigation as NavIcon, Plus, MapPin, X, Pencil, Home, AlertTriangle } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Circle, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -44,18 +44,56 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)}km away`;
 }
 
+// Component to handle map clicks for adding pins
+function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+const LostBanner = ({ closestZone, distance, onSOS }: { closestZone: string; distance: number; onSOS: () => void }) => (
+  <div className="fixed top-0 left-0 right-0 z-[80] animate-fade-in">
+    <div className="max-w-lg mx-auto px-4 pt-14">
+      <div className="bg-destructive/95 backdrop-blur-sm text-destructive-foreground p-4 flex items-center gap-3" style={{ borderRadius: 'var(--radius-md)' }}>
+        <AlertTriangle size={24} className="shrink-0" />
+        <div className="flex-1">
+          <p className="font-semibold text-sm">Are you lost?</p>
+          <p className="text-xs opacity-90">
+            You are {formatDistance(distance)} from {closestZone}
+          </p>
+        </div>
+        <button
+          onClick={onSOS}
+          className="px-4 py-2 bg-destructive-foreground text-destructive font-bold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
+        >
+          SOS
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const MapPage = () => {
-  const { locations, safeZones, currentUser, addLocation, addSafeZone, updateSafeZone, deleteSafeZone, addAuditEntry } = useApp();
+  const { locations, safeZones, currentUser, addLocation, addSafeZone, updateSafeZone, deleteSafeZone, addAuditEntry, addSOSEvent, contacts } = useApp();
   const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
   const [tracking, setTracking] = useState(false);
   const [editingZone, setEditingZone] = useState<string | null>(null);
   const [zoneName, setZoneName] = useState('');
   const [showAddZone, setShowAddZone] = useState(false);
+  const [addPinMode, setAddPinMode] = useState(false);
+  const [pendingPin, setPendingPin] = useState<{ lat: number; lng: number } | null>(null);
   const [newZoneName, setNewZoneName] = useState('');
   const [newZoneRadius, setNewZoneRadius] = useState(500);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [isLost, setIsLost] = useState(false);
+  const [lostInfo, setLostInfo] = useState<{ zone: string; distance: number } | null>(null);
+  const [showNavHome, setShowNavHome] = useState(false);
   const watchRef = useRef<number | null>(null);
+  const lostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -63,11 +101,42 @@ const MapPage = () => {
       (err) => {
         if (err.code === 1) setGeoError('Location access denied. Please enable location permissions.');
         else setGeoError('Could not get your location. Please try again.');
-        // Fallback position
         setCurrentPos({ lat: 40.7128, lng: -74.006 });
       }
     );
   }, []);
+
+  // Check if user is outside all safe zones
+  const checkLostStatus = useCallback((loc: { lat: number; lng: number }) => {
+    if (safeZones.length === 0) return;
+
+    let inAnyZone = false;
+    let closestZone = safeZones[0];
+    let minDist = Infinity;
+
+    for (const z of safeZones) {
+      const d = getDistance(loc.lat, loc.lng, z.lat, z.lng);
+      if (d < minDist) { minDist = d; closestZone = z; }
+      if (d <= z.radius_meters) { inAnyZone = true; }
+    }
+
+    if (!inAnyZone && minDist > 200) {
+      setIsLost(true);
+      setLostInfo({ zone: closestZone.name, distance: minDist });
+
+      // Browser notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Are you lost?', {
+          body: `You are ${formatDistance(minDist)} from ${closestZone.name}. Tap to get help.`,
+          tag: 'lost-detection',
+        });
+      }
+    } else {
+      setIsLost(false);
+      setLostInfo(null);
+      setShowNavHome(false);
+    }
+  }, [safeZones]);
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) { setGeoError('Geolocation not supported'); return; }
@@ -81,44 +150,65 @@ const MapPage = () => {
           user_id: currentUser.id, lat: loc.lat, lng: loc.lng,
           accuracy: pos.coords.accuracy, timestamp: new Date().toISOString(),
         });
-        // Lost detection
-        const hour = new Date().getHours();
-        const isNight = hour >= 20 || hour < 6;
-        if (isNight && safeZones.length > 0) {
-          let inZone = false;
-          let closestZone = safeZones[0];
-          let minDist = Infinity;
-          for (const z of safeZones) {
-            const d = getDistance(loc.lat, loc.lng, z.lat, z.lng);
-            if (d < minDist) { minDist = d; closestZone = z; }
-            if (d <= z.radius_meters) { inZone = true; break; }
-          }
-          if (!inZone && minDist > 500 && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Are you lost?', {
-              body: `You are ${formatDistance(minDist)} from ${closestZone?.name || 'your safe zone'}. Need help?`,
-            });
-          }
-        }
+        checkLostStatus(loc);
       },
       () => setGeoError('Lost GPS signal. Trying to reconnect...'),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
     watchRef.current = id;
     setTracking(true);
-  }, [currentUser.id, safeZones, addLocation]);
+  }, [currentUser.id, addLocation, checkLostStatus]);
 
   const stopTracking = () => {
     if (watchRef.current !== null) navigator.geolocation?.clearWatch(watchRef.current);
     watchRef.current = null;
     setTracking(false);
+    setIsLost(false);
+    setLostInfo(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (watchRef.current !== null) navigator.geolocation?.clearWatch(watchRef.current);
+      if (lostTimerRef.current) clearTimeout(lostTimerRef.current);
+    };
+  }, []);
+
+  const handleSOS = () => {
+    if (!currentPos) return;
+    addSOSEvent({
+      user_id: currentUser.id,
+      type: 'lost',
+      location_lat: currentPos.lat,
+      location_lng: currentPos.lng,
+      contacts_notified: contacts.filter(c => c.is_emergency).map(c => c.name),
+      timestamp: new Date().toISOString(),
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'sos_triggered',
+      target_type: 'sos_event', target_id: '',
+      new_value: { type: 'lost', lat: currentPos.lat, lng: currentPos.lng },
+    });
+    setShowNavHome(true);
+    setIsLost(false);
+  };
+
+  const handleMapClick = (lat: number, lng: number) => {
+    if (addPinMode) {
+      setPendingPin({ lat, lng });
+    }
   };
 
   const handleAddSafeZone = () => {
-    if (!currentPos) return;
-    const name = newZoneName.trim() || 'My Location';
+    const pos = pendingPin || currentPos;
+    if (!pos) return;
+    const name = newZoneName.trim() || 'Safe Zone';
     addSafeZone({
       user_id: currentUser.id, name,
-      lat: currentPos.lat, lng: currentPos.lng,
+      lat: pos.lat, lng: pos.lng,
       radius_meters: newZoneRadius, active_hours_start: '00:00', active_hours_end: '23:59',
     });
     addAuditEntry({
@@ -127,11 +217,13 @@ const MapPage = () => {
       actor_name: `${currentUser.name} (${currentUser.role})`,
       action_type: 'safe_zone_added',
       target_type: 'safe_zone', target_id: '',
-      new_value: { name, lat: currentPos.lat, lng: currentPos.lng, radius: newZoneRadius },
+      new_value: { name, lat: pos.lat, lng: pos.lng, radius: newZoneRadius },
     });
     setNewZoneName('');
     setNewZoneRadius(500);
     setShowAddZone(false);
+    setAddPinMode(false);
+    setPendingPin(null);
   };
 
   const handleDeleteZone = (id: string) => {
@@ -140,20 +232,68 @@ const MapPage = () => {
     setConfirmDelete(null);
   };
 
+  // Find "Home" zone for navigation
+  const homeZone = safeZones.find(z => z.name.toLowerCase().includes('home')) || safeZones[0];
+
   const recentLocations = locations.slice(-50).map(l => [l.lat, l.lng] as [number, number]);
   const defaultCenter: [number, number] = currentPos ? [currentPos.lat, currentPos.lng] : [40.7128, -74.006];
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
+      {/* Lost detection banner */}
+      {isLost && lostInfo && (
+        <LostBanner closestZone={lostInfo.zone} distance={lostInfo.distance} onSOS={handleSOS} />
+      )}
+
+      {/* Navigate home overlay */}
+      {showNavHome && homeZone && currentPos && (
+        <GlassCard className="mb-4 p-4 border-2 border-mint/40 animate-fade-in">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-mint/20 flex items-center justify-center">
+              <Home size={20} className="text-foreground" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground">Finding your way to {homeZone.name}</p>
+              <p className="text-xs text-muted-foreground">{formatDistance(getDistance(currentPos.lat, currentPos.lng, homeZone.lat, homeZone.lng))}</p>
+            </div>
+          </div>
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&origin=${currentPos.lat},${currentPos.lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary w-full flex items-center justify-center gap-2 min-h-[48px]"
+          >
+            <NavIcon size={18} />
+            Open Walking Directions
+          </a>
+          <button onClick={() => setShowNavHome(false)} className="w-full text-sm text-muted-foreground mt-2 min-h-[44px]">
+            Dismiss
+          </button>
+        </GlassCard>
+      )}
+
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Location & Safety</h1>
-        <button
-          onClick={tracking ? stopTracking : startTracking}
-          className={`flex items-center gap-2 px-4 min-h-[44px] rounded-xl font-medium transition-colors duration-200 ${tracking ? 'bg-destructive/20 text-destructive' : 'bg-mint/20 text-foreground'}`}
-        >
-          <NavIcon size={16} />
-          <span className="text-sm">{tracking ? 'Stop' : 'Track'}</span>
-        </button>
+        <h1 className="text-2xl font-bold text-foreground">Location</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setAddPinMode(!addPinMode); setPendingPin(null); }}
+            className={`flex items-center gap-1.5 px-3 min-h-[44px] rounded-xl font-medium text-sm transition-colors duration-200 active:scale-95 ${
+              addPinMode ? 'bg-soft-pink/30 text-foreground' : 'bg-soft-pink/10 text-muted-foreground'
+            }`}
+          >
+            <MapPin size={16} />
+            Pin
+          </button>
+          <button
+            onClick={tracking ? stopTracking : startTracking}
+            className={`flex items-center gap-1.5 px-3 min-h-[44px] rounded-xl font-medium text-sm transition-colors duration-200 active:scale-95 ${
+              tracking ? 'bg-destructive/20 text-destructive' : 'bg-mint/20 text-foreground'
+            }`}
+          >
+            <NavIcon size={16} />
+            {tracking ? 'Stop' : 'Track'}
+          </button>
+        </div>
       </div>
 
       {geoError && (
@@ -162,41 +302,66 @@ const MapPage = () => {
         </GlassCard>
       )}
 
+      {addPinMode && (
+        <GlassCard className="p-3 mb-3 flex items-center gap-2 bg-soft-pink/10 animate-fade-in">
+          <MapPin size={16} className="text-soft-pink" />
+          <span className="text-sm text-foreground">
+            {pendingPin ? 'Pin placed! Name it below.' : 'Tap the map to place a safe zone pin.'}
+          </span>
+        </GlassCard>
+      )}
+
       {tracking && (
-        <GlassCard className="p-3 mb-4 flex items-center gap-2 animate-fade-in">
+        <GlassCard className="p-3 mb-3 flex items-center gap-2 animate-fade-in">
           <div className="w-3 h-3 rounded-full bg-mint animate-pulse" />
-          <span className="text-sm">Live tracking · {locations.length} points</span>
-          {currentPos && (
-            <span className="text-xs text-muted-foreground ml-auto">
-              {currentPos.lat.toFixed(4)}, {currentPos.lng.toFixed(4)}
-            </span>
-          )}
+          <span className="text-sm text-foreground">Live tracking</span>
+          {currentPos && safeZones.length > 0 && (() => {
+            let minDist = Infinity;
+            let closest = safeZones[0];
+            let inside = false;
+            for (const z of safeZones) {
+              const d = getDistance(currentPos.lat, currentPos.lng, z.lat, z.lng);
+              if (d < minDist) { minDist = d; closest = z; }
+              if (d <= z.radius_meters) inside = true;
+            }
+            return (
+              <span className={`text-xs ml-auto px-2 py-0.5 rounded-full ${inside ? 'bg-mint/20' : 'bg-soft-pink/20'}`}>
+                {inside ? `Inside ${closest.name}` : `${formatDistance(minDist)} from ${closest.name}`}
+              </span>
+            );
+          })()}
         </GlassCard>
       )}
 
       {/* Map */}
-      <GlassCard className="overflow-hidden mb-4" style={{ height: 320 }}>
+      <GlassCard className="overflow-hidden mb-4" style={{ height: 340 }}>
         <MapContainer center={defaultCenter} zoom={14} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <MapClickHandler onMapClick={handleMapClick} />
           {currentPos && (
             <>
               <RecenterMap lat={currentPos.lat} lng={currentPos.lng} />
               <Marker position={[currentPos.lat, currentPos.lng]} icon={blueIcon}>
-                <Popup>📍 You are here</Popup>
+                <Popup>You are here</Popup>
               </Marker>
             </>
+          )}
+          {pendingPin && (
+            <Marker position={[pendingPin.lat, pendingPin.lng]}>
+              <Popup>New safe zone pin</Popup>
+            </Marker>
           )}
           {safeZones.map(z => (
             <React.Fragment key={z.id}>
               <Circle center={[z.lat, z.lng]} radius={z.radius_meters}
                 pathOptions={{ color: 'hsl(150, 55%, 60%)', fillColor: 'hsl(150, 55%, 80%)', fillOpacity: 0.2, weight: 2 }}>
-                <Popup>🛡️ {z.name} ({z.radius_meters}m)</Popup>
+                <Popup>{z.name} ({z.radius_meters}m)</Popup>
               </Circle>
               <Marker position={[z.lat, z.lng]} icon={greenIcon}>
-                <Popup>🛡️ {z.name}</Popup>
+                <Popup>{z.name}</Popup>
               </Marker>
             </React.Fragment>
           ))}
@@ -206,19 +371,14 @@ const MapPage = () => {
         </MapContainer>
       </GlassCard>
 
-      {/* Add Safe Zone */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold flex items-center gap-2"><Shield size={20} /> Safe Zones</h2>
-        <button onClick={() => setShowAddZone(!showAddZone)} className="p-3 rounded-full bg-mint/20 hover:bg-mint/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Add safe zone">
-          {showAddZone ? <X size={20} /> : <Plus size={20} />}
-        </button>
-      </div>
-
-      {showAddZone && (
+      {/* Add zone form - shown when pin is placed or manual add */}
+      {(pendingPin || showAddZone) && (
         <GlassCard className="p-4 mb-4 animate-scale-in">
-          <h3 className="font-semibold mb-3">Add Safe Zone at Current Location</h3>
+          <h3 className="font-semibold mb-3 text-foreground">
+            {pendingPin ? 'Name this safe zone' : 'Add Safe Zone at Current Location'}
+          </h3>
           <div className="space-y-3">
-            <input value={newZoneName} onChange={e => setNewZoneName(e.target.value)} placeholder="Zone name (e.g. Home, Hospital)" className="input-glass w-full" />
+            <input value={newZoneName} onChange={e => setNewZoneName(e.target.value)} placeholder="Zone name (e.g. Home, Park, Hospital)" className="input-glass w-full" />
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Radius: {newZoneRadius}m</label>
               <input type="range" min={100} max={5000} step={100} value={newZoneRadius}
@@ -228,18 +388,35 @@ const MapPage = () => {
                 <span>100m</span><span>5km</span>
               </div>
             </div>
-            <button onClick={handleAddSafeZone} className="btn-secondary w-full min-h-[48px] flex items-center justify-center gap-2">
-              <MapPin size={18} /> Save Safe Zone
+            <button onClick={handleAddSafeZone} className="btn-secondary w-full min-h-[48px] flex items-center justify-center gap-2 active:scale-95">
+              <Shield size={18} /> Save Safe Zone
+            </button>
+            <button onClick={() => { setShowAddZone(false); setAddPinMode(false); setPendingPin(null); }} className="w-full text-sm text-muted-foreground min-h-[44px]">
+              Cancel
             </button>
           </div>
         </GlassCard>
       )}
 
+      {/* Safe Zones header */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2"><Shield size={20} /> Safe Zones</h2>
+        <button onClick={() => { setShowAddZone(!showAddZone); setAddPinMode(false); setPendingPin(null); }} className="p-3 rounded-full bg-mint/20 hover:bg-mint/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95" aria-label="Add safe zone">
+          {showAddZone ? <X size={20} /> : <Plus size={20} />}
+        </button>
+      </div>
+
       {/* Safe Zones List */}
       {safeZones.length === 0 ? (
-        <GlassCard className="p-6 text-center">
-          <Shield size={32} className="text-mint mx-auto mb-3 opacity-50" />
-          <p className="text-muted-foreground text-sm">No safe zones yet. Add one to enable lost detection alerts.</p>
+        <GlassCard className="p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-mint/15 flex items-center justify-center mx-auto mb-4">
+            <Shield size={28} className="text-mint" />
+          </div>
+          <h3 className="font-semibold text-foreground mb-1">No safe zones yet</h3>
+          <p className="text-muted-foreground text-sm mb-4">Add safe zones like Home or Hospital. You will be alerted when you leave them.</p>
+          <button onClick={() => setAddPinMode(true)} className="btn-secondary flex items-center gap-2 mx-auto active:scale-95">
+            <MapPin size={16} /> Pin on Map
+          </button>
         </GlassCard>
       ) : (
         <div className="space-y-2">
@@ -260,26 +437,24 @@ const MapPage = () => {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{z.name}</p>
+                        <p className="font-medium text-foreground">{z.name}</p>
                         <button onClick={() => { setEditingZone(z.id); setZoneName(z.name); }}
                           className="p-1 rounded hover:bg-muted"><Pencil size={12} className="text-muted-foreground" /></button>
                       </div>
                     )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${isInside ? 'bg-mint/20 text-foreground' : 'bg-soft-pink/20 text-foreground'}`}>
-                        {isInside ? '✓ Inside zone' : dist !== null ? formatDistance(dist) : 'Unknown'}
+                        {isInside ? 'Inside zone' : dist !== null ? formatDistance(dist) : 'Unknown'}
                       </span>
                       <span className="text-xs text-muted-foreground">{z.radius_meters}m radius</span>
                     </div>
                   </div>
                   <button onClick={() => handleDeleteZone(z.id)}
-                    className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-colors ${confirmDelete === z.id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-destructive'}`}
+                    className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-colors active:scale-95 ${confirmDelete === z.id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-destructive'}`}
                     aria-label="Delete safe zone">
                     {confirmDelete === z.id ? <X size={16} /> : <Trash2 size={16} />}
                   </button>
                 </div>
-
-                {/* Radius slider */}
                 <input type="range" min={100} max={5000} step={100} value={z.radius_meters}
                   onChange={e => updateSafeZone(z.id, { radius_meters: parseInt(e.target.value) })}
                   className="w-full accent-mint" aria-label="Adjust radius" />
@@ -291,6 +466,5 @@ const MapPage = () => {
     </div>
   );
 };
-
 
 export default MapPage;
