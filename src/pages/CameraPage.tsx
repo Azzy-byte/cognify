@@ -21,6 +21,7 @@ const CameraPage = () => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
   const [memoryHashesByPerson, setMemoryHashesByPerson] = useState<Record<string, string[]>>({});
+  const [derivedMemoryPeople, setDerivedMemoryPeople] = useState<Array<{ id: string; name: string; relationship: string; photo_hashes: string[] }>>([]);
   const [hashingMemoryPhotos, setHashingMemoryPhotos] = useState(false);
 
   useEffect(() => {
@@ -38,8 +39,9 @@ const CameraPage = () => {
     const buildMemoryHashes = async () => {
       setHashingMemoryPhotos(true);
       const next: Record<string, string[]> = {};
+      const derivedByName = new Map<string, { id: string; name: string; relationship: string; photo_hashes: string[] }>();
 
-      // Hash photos for known people from their tagged memories
+      // Hash photos for known people from tagged memories / summary mention
       for (const person of people) {
         const relatedImages = memories
           .filter(m => m.people.includes(person.name) || m.summary.toLowerCase().includes(person.name.toLowerCase()))
@@ -57,17 +59,35 @@ const CameraPage = () => {
           .map(result => result.value);
       }
 
-      // Also hash ALL memory photos (for matching even when people list is empty)
-      const allMemoryImages = [...new Set(memories.flatMap(m => m.image_urls))].slice(0, 30);
-      if (allMemoryImages.length > 0) {
-        const allResults = await Promise.allSettled(allMemoryImages.map(url => generatePerceptualHash(url)));
-        next['__all_memory_hashes__'] = allResults
-          .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
-          .map(r => r.value);
+      // Build recognisable people directly from memory tags (works even if People list is empty)
+      for (const memory of memories) {
+        if (!memory.image_urls.length || !memory.people.length) continue;
+        for (const rawName of memory.people) {
+          const trimmedName = rawName.trim();
+          if (!trimmedName) continue;
+          const key = trimmedName.toLowerCase();
+          const existing = derivedByName.get(key);
+          const existingHashes = existing?.photo_hashes ?? [];
+
+          const hashResults = await Promise.allSettled(
+            [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
+          );
+          const memoryHashes = hashResults
+            .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+            .map(result => result.value);
+
+          derivedByName.set(key, {
+            id: `memory-${key.replace(/\s+/g, '-')}`,
+            name: existing?.name ?? trimmedName,
+            relationship: 'From memories',
+            photo_hashes: [...new Set([...existingHashes, ...memoryHashes])],
+          });
+        }
       }
 
       if (active) {
         setMemoryHashesByPerson(next);
+        setDerivedMemoryPeople(Array.from(derivedByName.values()));
         setHashingMemoryPhotos(false);
       }
     };
@@ -81,11 +101,16 @@ const CameraPage = () => {
 
   // Build an extended people list that includes perceptual hashes from memories
   const getPeopleWithMemoryHashes = useCallback(() => {
-    return people.map(person => ({
+    const knownPeople = people.map(person => ({
       ...person,
       photo_hashes: [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])],
     }));
-  }, [people, memoryHashesByPerson]);
+
+    const knownNames = new Set(knownPeople.map(p => p.name.toLowerCase()));
+    const memoryOnlyPeople = derivedMemoryPeople.filter(p => !knownNames.has(p.name.toLowerCase()));
+
+    return [...knownPeople, ...memoryOnlyPeople];
+  }, [people, memoryHashesByPerson, derivedMemoryPeople]);
 
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
@@ -173,19 +198,34 @@ const CameraPage = () => {
       setMatchResult({ recognized: false });
     }
     setAnalyzing(false);
-  }, [people, stopCamera, getPeopleWithMemoryHashes]);
+  }, [stopCamera, getPeopleWithMemoryHashes]);
 
   const confirmMatch = async () => {
-    if (!matchResult?.personId || !photo) return;
-    const person = people.find((p) => p.id === matchResult.personId);
-    if (!person) return;
+    if (!matchResult?.name || !photo) return;
+    const matchedName = matchResult.name;
+    const person = people.find((p) =>
+      p.id === matchResult.personId || p.name.toLowerCase() === matchedName.toLowerCase()
+    );
     const hash = await generatePerceptualHash(photo);
-    updatePerson(person.id, {
-      photo_urls: [...person.photo_urls, photo],
-      photo_hashes: [...(person.photo_hashes || []), hash],
-      times_mentioned: person.times_mentioned + 1,
-    });
-    setTagged(person.name);
+
+    if (person) {
+      updatePerson(person.id, {
+        photo_urls: [...person.photo_urls, photo],
+        photo_hashes: [...(person.photo_hashes || []), hash],
+        times_mentioned: person.times_mentioned + 1,
+      });
+      setTagged(person.name);
+    } else {
+      addPerson({
+        name: matchResult.name,
+        relationship: matchResult.relationship || 'From memories',
+        photo_urls: [photo],
+        photo_hashes: [hash],
+        times_mentioned: 1,
+      });
+      setTagged(matchResult.name);
+    }
+
     setTimeout(() => reset(), 2000);
   };
 
