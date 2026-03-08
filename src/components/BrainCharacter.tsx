@@ -47,15 +47,15 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
 
           {/* === BRAIN FOLDS (curved lines) === */}
           {/* Center vertical line */}
-          <path d="M100 42 V78" stroke="hsl(12 45% 68%)" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M100 42 V78" stroke="hsl(340 45% 72%)" strokeWidth="2.5" strokeLinecap="round" />
           {/* Left folds */}
-          <path d="M58 52 C68 46, 82 48, 92 58" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M44 76 C56 68, 72 68, 84 78" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M50 100 C62 92, 74 92, 86 98" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M58 52 C68 46, 82 48, 92 58" stroke="hsl(340 45% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M44 76 C56 68, 72 68, 84 78" stroke="hsl(340 45% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M50 100 C62 92, 74 92, 86 98" stroke="hsl(340 45% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
           {/* Right folds */}
-          <path d="M142 52 C132 46, 118 48, 108 58" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M156 76 C144 68, 128 68, 116 78" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M150 100 C138 92, 126 92, 114 98" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M142 52 C132 46, 118 48, 108 58" stroke="hsl(340 45% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M156 76 C144 68, 128 68, 116 78" stroke="hsl(340 45% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M150 100 C138 92, 126 92, 114 98" stroke="hsl(340 45% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
 
           {/* === FACE === */}
           {/* Eyes */}
