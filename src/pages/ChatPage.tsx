@@ -157,7 +157,7 @@ const ChatPage = () => {
     }, 600 + Math.random() * 400);
 
     setAudioRecordings([]);
-  }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate]);
+  }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate, addReminder, addAuditEntry]);
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
