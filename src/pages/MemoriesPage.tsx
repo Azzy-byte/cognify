@@ -63,6 +63,17 @@ const MemoryCard = ({ memory, onClick, index }: { memory: Memory; onClick: () =>
             </div>
           )}
 
+          {memory.audio_urls && memory.audio_urls.length > 0 && (
+            <div className="space-y-2">
+              {memory.audio_urls.map((url, j) => (
+                <div key={j} className="flex items-center gap-2 bg-lavender/10 rounded-2xl p-2">
+                  <Volume2 size={14} className="text-lavender shrink-0" />
+                  <audio src={url} controls className="w-full h-8" />
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-1.5">
             {memory.people.map(p => (
               <span key={p} className="px-3 py-1 bg-lavender/20 text-foreground rounded-full text-xs font-medium">
