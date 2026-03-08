@@ -4,6 +4,33 @@ import GlassCard from '@/components/GlassCard';
 import { Camera, RotateCcw, User, Check, Trash2, X } from 'lucide-react';
 import { generatePerceptualHash, findMatch, type MatchResult } from '@/lib/phash';
 
+type DerivedMemoryPerson = { id: string; name: string; relationship: string; photo_hashes: string[] };
+
+const STOP_WORD_NAMES = new Set([
+  'I', 'Im', 'My', 'Me', 'We', 'You', 'He', 'She', 'They', 'It',
+  'Today', 'Yesterday', 'Tomorrow', 'Morning', 'Evening', 'Night',
+  'The', 'A', 'An', 'And', 'But', 'With', 'From', 'For', 'At', 'In', 'On',
+]);
+
+const extractCandidateNames = (text: string) => {
+  const matches = text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b/g) ?? [];
+  return [...new Set(matches.filter(name => !STOP_WORD_NAMES.has(name)))].slice(0, 6);
+};
+
+const getMemoryNames = (memory: { people: string[]; summary: string; conversation: Array<{ role: string; text: string }> }) => {
+  if (memory.people.length > 0) {
+    return [...new Set(memory.people.map(p => p.trim()).filter(Boolean))];
+  }
+
+  const conversationText = memory.conversation
+    .filter(msg => msg.role === 'user')
+    .map(msg => msg.text)
+    .join(' ');
+
+  const inferred = extractCandidateNames(`${memory.summary} ${conversationText}`);
+  return inferred;
+};
+
 const CameraPage = () => {
   const { people, memories, addPerson, updatePerson, deletePerson, addAuditEntry, currentUser } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,7 +48,7 @@ const CameraPage = () => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
   const [memoryHashesByPerson, setMemoryHashesByPerson] = useState<Record<string, string[]>>({});
-  const [derivedMemoryPeople, setDerivedMemoryPeople] = useState<Array<{ id: string; name: string; relationship: string; photo_hashes: string[] }>>([]);
+  const [derivedMemoryPeople, setDerivedMemoryPeople] = useState<DerivedMemoryPerson[]>([]);
   const [hashingMemoryPhotos, setHashingMemoryPhotos] = useState(false);
 
   useEffect(() => {
@@ -59,22 +86,25 @@ const CameraPage = () => {
           .map(result => result.value);
       }
 
-      // Build recognisable people directly from memory tags (works even if People list is empty)
+      // Build recognisable people directly from memory tags/text (works even if People list is empty)
       for (const memory of memories) {
-        if (!memory.image_urls.length || !memory.people.length) continue;
-        for (const rawName of memory.people) {
+        if (!memory.image_urls.length) continue;
+        const memoryNames = getMemoryNames(memory);
+        if (!memoryNames.length) continue;
+
+        const hashResults = await Promise.allSettled(
+          [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
+        );
+        const memoryHashes = hashResults
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+          .map(result => result.value);
+
+        for (const rawName of memoryNames) {
           const trimmedName = rawName.trim();
           if (!trimmedName) continue;
           const key = trimmedName.toLowerCase();
           const existing = derivedByName.get(key);
           const existingHashes = existing?.photo_hashes ?? [];
-
-          const hashResults = await Promise.allSettled(
-            [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
-          );
-          const memoryHashes = hashResults
-            .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-            .map(result => result.value);
 
           derivedByName.set(key, {
             id: `memory-${key.replace(/\s+/g, '-')}`,
@@ -194,9 +224,12 @@ const CameraPage = () => {
       // Fallback: if memory indexing is still cold, compute directly from memories now
       const hasAnyHashes = extendedPeople.some(p => (p.photo_hashes?.length || 0) > 0);
       if (!hasAnyHashes && memories.length > 0) {
-        const derivedByName = new Map<string, { id: string; name: string; relationship: string; photo_hashes: string[] }>();
+        const derivedByName = new Map<string, DerivedMemoryPerson>();
         for (const memory of memories) {
-          if (!memory.image_urls.length || !memory.people.length) continue;
+          if (!memory.image_urls.length) continue;
+          const memoryNames = getMemoryNames(memory);
+          if (!memoryNames.length) continue;
+
           const hashResults = await Promise.allSettled(
             [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
           );
@@ -204,7 +237,7 @@ const CameraPage = () => {
             .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
             .map(result => result.value);
 
-          for (const rawName of memory.people) {
+          for (const rawName of memoryNames) {
             const trimmedName = rawName.trim();
             if (!trimmedName) continue;
             const key = trimmedName.toLowerCase();
