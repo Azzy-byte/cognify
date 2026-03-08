@@ -1,7 +1,8 @@
 import { useApp } from '@/store/AppContext';
 import GlassCard from './GlassCard';
-import { Hospital, HelpCircle, ShieldAlert, Phone, CheckCircle } from 'lucide-react';
+import { Hospital, HelpCircle, ShieldAlert, Phone, CheckCircle, Navigation } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 const emergencyTypes = [
   { type: 'medical' as const, icon: Hospital, label: 'Medical' },
@@ -16,40 +17,75 @@ interface SOSModalProps {
 }
 
 const SOSModal = ({ open, onClose }: SOSModalProps) => {
-  const { contacts, currentUser, addSOSEvent, addAuditEntry } = useApp();
+  const { contacts, currentUser, safeZones, addSOSEvent, addAuditEntry } = useApp();
   const [sent, setSent] = useState(false);
+  const [sosType, setSosType] = useState<string | null>(null);
+  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
   const emergencyContacts = contacts.filter(c => c.is_emergency);
 
   const handleSOS = (type: 'medical' | 'lost' | 'safety' | 'help') => {
+    setSosType(type);
+
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
-        addSOSEvent({
-          user_id: currentUser.id, type,
-          location_lat: pos.coords.latitude, location_lng: pos.coords.longitude,
-          contacts_notified: emergencyContacts.map(c => c.name),
-          timestamp: new Date().toISOString(),
-        });
-        addAuditEntry({
-          timestamp: new Date().toISOString(),
-          actor_id: currentUser.id,
-          actor_name: `${currentUser.name} (${currentUser.role})`,
-          action_type: 'sos_triggered',
-          target_type: 'sos', target_id: '',
-          new_value: { type, contacts: emergencyContacts.map(c => c.name) },
-        });
-        setSent(true);
-        setTimeout(() => { setSent(false); onClose(); }, 2000);
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCurrentPos(loc);
+        triggerSOS(type, loc);
       },
       () => {
-        addSOSEvent({
-          user_id: currentUser.id, type,
-          location_lat: 0, location_lng: 0,
-          contacts_notified: emergencyContacts.map(c => c.name),
-          timestamp: new Date().toISOString(),
-        });
-        setSent(true);
-        setTimeout(() => { setSent(false); onClose(); }, 2000);
+        triggerSOS(type, { lat: 0, lng: 0 });
       }
+    );
+  };
+
+  const triggerSOS = (type: string, loc: { lat: number; lng: number }) => {
+    addSOSEvent({
+      user_id: currentUser.id,
+      type: type as 'medical' | 'lost' | 'safety' | 'help',
+      location_lat: loc.lat,
+      location_lng: loc.lng,
+      contacts_notified: emergencyContacts.map(c => c.name),
+      timestamp: new Date().toISOString(),
+    });
+
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'sos_triggered',
+      target_type: 'sos',
+      target_id: '',
+      new_value: { type, contacts: emergencyContacts.map(c => c.name), location: loc },
+    });
+
+    // Alert each emergency contact
+    emergencyContacts.forEach(contact => {
+      toast.error(`🚨 SOS Alert sent to ${contact.name}!`, {
+        description: `${currentUser.name} triggered a ${type} emergency${loc.lat !== 0 ? ` at location (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})` : ''}.`,
+        duration: 8000,
+      });
+    });
+
+    if (emergencyContacts.length === 0) {
+      toast.warning('No emergency contacts set up. Add contacts in the Family page.');
+    }
+
+    setSent(true);
+  };
+
+  const getHomeDirections = () => {
+    if (!currentPos || currentPos.lat === 0) {
+      toast.info('Location not available. Please enable GPS.');
+      return;
+    }
+    const homeZone = safeZones.find(z => z.name.toLowerCase().includes('home')) || safeZones[0];
+    if (!homeZone) {
+      toast.info('No home location set. Add a safe zone on the Map page.');
+      return;
+    }
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&origin=${currentPos.lat},${currentPos.lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`,
+      '_blank'
     );
   };
 
@@ -60,10 +96,27 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
       <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
       <div className="relative animate-scale-in" onClick={e => e.stopPropagation()}>
         {sent ? (
-          <GlassCard className="p-8 text-center">
+          <GlassCard className="p-8 text-center max-w-sm">
             <CheckCircle size={48} className="text-mint mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Alert Sent</h3>
-            <p className="text-muted-foreground">Notified {emergencyContacts.length} emergency contact{emergencyContacts.length !== 1 ? 's' : ''}</p>
+            <p className="text-muted-foreground mb-4">
+              Notified {emergencyContacts.length} emergency contact{emergencyContacts.length !== 1 ? 's' : ''}
+            </p>
+            {sosType === 'lost' && (
+              <button
+                onClick={getHomeDirections}
+                className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px] mb-3"
+              >
+                <Navigation size={18} />
+                Show Way Back Home
+              </button>
+            )}
+            <button
+              onClick={() => { setSent(false); setSosType(null); onClose(); }}
+              className="text-sm text-muted-foreground min-h-[44px]"
+            >
+              Close
+            </button>
           </GlassCard>
         ) : (
           <GlassCard className="p-6" style={{ borderRadius: 'var(--radius-lg)' }}>

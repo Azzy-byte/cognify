@@ -1,10 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import BrainCharacter from '@/components/BrainCharacter';
 import { Send, Mic, ImagePlus, Save, X, Play, Square } from 'lucide-react';
-import { generateSmartResponse } from '@/lib/chatAssistant';
+import { streamChat } from '@/lib/streamChat';
 import type { ChatMessage } from '@/types';
 
 interface AudioRecording {
@@ -74,14 +73,13 @@ const TypingIndicator = () => (
 );
 
 const ChatPage = () => {
-  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addReminder, addAuditEntry } = useApp();
-  const navigate = useNavigate();
+  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addAuditEntry } = useApp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [typing, setTyping] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const [audioRecordings, setAudioRecordings] = useState<AudioRecording[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -91,7 +89,26 @@ const ChatPage = () => {
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, typing]);
+  }, [messages, streaming]);
+
+  const buildAppContext = useCallback(() => {
+    const medsList = medications.map(m => `${m.name} ${m.dosage} (${m.frequency}, ${m.times.join(', ')})`).join('; ');
+    const peopleList = people.map(p => `${p.name} (${p.relationship})`).join('; ');
+    const recentMems = memories.slice(0, 5).map(m => m.summary).join('; ');
+    const contactsList = contacts.filter(c => c.is_emergency).map(c => `${c.name} (${c.relationship}) ${c.phone}`).join('; ');
+    const zonesList = safeZones.map(z => z.name).join('; ');
+    const remindersList = reminders.slice(0, 5).map(r => `${r.title} at ${r.time}`).join('; ');
+
+    return {
+      userName: currentUser.name || 'Friend',
+      medications: medsList || 'None saved',
+      people: peopleList || 'None saved',
+      recentMemories: recentMems || 'None saved',
+      contacts: contactsList || 'None set',
+      safeZones: zonesList || 'None set',
+      reminders: remindersList || 'None set',
+    };
+  }, [currentUser, medications, people, memories, contacts, safeZones, reminders]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() && images.length === 0 && audioRecordings.length === 0) return;
@@ -106,60 +123,40 @@ const ChatPage = () => {
     setMessages(newMessages);
     setInput('');
     setImages([]);
+    setStreaming(true);
 
-    // Show typing indicator
-    setTyping(true);
+    // Build message history for AI
+    const aiMessages = newMessages.map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.text,
+    }));
 
-    // Generate smart response with a slight delay for natural feel
-    setTimeout(() => {
-      const appData = {
-        currentUser, memories, people, medications, reminders, contacts, safeZones,
-      };
-      const response = generateSmartResponse(
-        input,
-        appData,
-        newMessages.map(m => ({ role: m.role, text: m.text }))
-      );
+    let assistantSoFar = '';
 
-      const assistantMsg: ChatMessage = { role: 'assistant', text: response.text };
-      setMessages([...newMessages, assistantMsg]);
-      setTyping(false);
-
-      // Handle assistant actions
-      if (response.action?.type === 'navigate' && response.action.payload?.path) {
-        setTimeout(() => {
-          navigate(response.action!.payload!.path as string);
-        }, 900);
-      }
-
-      if (response.action?.type === 'add_reminder') {
-        const title = String(response.action.payload?.title || '').trim();
-        const time = String(response.action.payload?.time || '').trim();
-        if (title && time) {
-          addReminder({
-            title,
-            time,
-            date: new Date().toISOString().split('T')[0],
-            category: 'routine',
-            repeat: true,
-            completed: false,
-          });
-          addAuditEntry({
-            timestamp: new Date().toISOString(),
-            actor_id: currentUser.id,
-            actor_name: `${currentUser.name} (${currentUser.role})`,
-            action_type: 'reminder_created_via_chat',
-            target_type: 'reminder',
-            target_id: '',
-            new_value: { title, time },
-          });
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant') {
+          return prev.map((m, i) => (i === prev.length - 1 ? { ...m, text: assistantSoFar } : m));
         }
-      }
-    }, 600 + Math.random() * 400);
+        return [...prev, { role: 'assistant' as const, text: assistantSoFar }];
+      });
+    };
 
-    audioRecordings.forEach(recordingItem => URL.revokeObjectURL(recordingItem.url));
+    streamChat({
+      messages: aiMessages,
+      appContext: buildAppContext(),
+      onDelta: (chunk) => upsertAssistant(chunk),
+      onDone: () => setStreaming(false),
+      onError: (error) => {
+        upsertAssistant(error || "I'm having trouble connecting. Please try again.");
+      },
+    });
+
+    audioRecordings.forEach(rec => URL.revokeObjectURL(rec.url));
     setAudioRecordings([]);
-  }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate, addReminder, addAuditEntry]);
+  }, [input, images, messages, audioRecordings, buildAppContext]);
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -221,9 +218,9 @@ const ChatPage = () => {
       setRecording(true);
     } catch (err) {
       if (err instanceof Error && err.name === 'NotAllowedError') {
-        alert('Microphone access denied. Please allow microphone permissions in your browser settings.');
+        alert('Microphone access denied. Please allow microphone permissions.');
       } else {
-        alert('Could not access microphone. Please try again.');
+        alert('Could not access microphone.');
       }
       setRecording(false);
     }
@@ -272,10 +269,10 @@ const ChatPage = () => {
   };
 
   const quickActions = [
-    { label: '💊 My Meds', prompt: 'What are my medications?' },
-    { label: '🧠 Memories', prompt: 'Show my recent memories' },
-    { label: '👥 People', prompt: 'Who are the people I know?' },
-    { label: '❓ Help', prompt: 'What can you do?' },
+    { label: '💊 My Meds', prompt: 'What are my current medications and when should I take them?' },
+    { label: '🧠 Memories', prompt: 'Show me my recent memories and what happened' },
+    { label: '👥 People', prompt: 'Who are the people I know? Tell me about them.' },
+    { label: '❓ Help', prompt: 'What can you help me with?' },
   ];
 
   const handleQuickAction = (prompt: string) => {
@@ -308,7 +305,7 @@ const ChatPage = () => {
         {messages.map((msg, i) => (
           <ChatBubble key={i} msg={msg} index={i} />
         ))}
-        {typing && <TypingIndicator />}
+        {streaming && messages[messages.length - 1]?.role !== 'assistant' && <TypingIndicator />}
         <div ref={scrollRef} />
       </div>
 
@@ -365,11 +362,12 @@ const ChatPage = () => {
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSend()}
+          onKeyDown={e => e.key === 'Enter' && !streaming && handleSend()}
           placeholder="Ask me anything..."
           className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground min-h-[48px]"
+          disabled={streaming}
         />
-        <button data-send-btn onClick={handleSend} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95" aria-label="Send message">
+        <button data-send-btn onClick={handleSend} disabled={streaming} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95 disabled:opacity-50" aria-label="Send message">
           <Send size={20} className="text-soft-pink" />
         </button>
       </GlassCard>

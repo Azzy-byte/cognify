@@ -36,17 +36,10 @@ const CameraPage = () => {
     let active = true;
 
     const buildMemoryHashes = async () => {
-      if (people.length === 0) {
-        if (active) {
-          setMemoryHashesByPerson({});
-          setHashingMemoryPhotos(false);
-        }
-        return;
-      }
-
       setHashingMemoryPhotos(true);
       const next: Record<string, string[]> = {};
 
+      // Hash photos for known people from their tagged memories
       for (const person of people) {
         const relatedImages = memories
           .filter(m => m.people.includes(person.name) || m.summary.toLowerCase().includes(person.name.toLowerCase()))
@@ -62,6 +55,15 @@ const CameraPage = () => {
         next[person.id] = hashResults
           .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
           .map(result => result.value);
+      }
+
+      // Also hash ALL memory photos (for matching even when people list is empty)
+      const allMemoryImages = [...new Set(memories.flatMap(m => m.image_urls))].slice(0, 30);
+      if (allMemoryImages.length > 0) {
+        const allResults = await Promise.allSettled(allMemoryImages.map(url => generatePerceptualHash(url)));
+        next['__all_memory_hashes__'] = allResults
+          .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+          .map(r => r.value);
       }
 
       if (active) {
