@@ -14,6 +14,8 @@ const ChatPage = () => {
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSend = useCallback(() => {
@@ -46,30 +48,78 @@ const ChatPage = () => {
     e.target.value = '';
   };
 
-  const toggleVoice = () => {
+  // Voice recording - called directly from button click (user gesture)
+  const toggleVoice = useCallback(async () => {
     if (recording) {
+      // Stop recording
       recognitionRef.current?.stop();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
       setRecording(false);
       return;
     }
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { alert('Speech recognition not supported in this browser'); return; }
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.onresult = (e: any) => {
-      let transcript = '';
-      for (let i = 0; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript;
+
+    try {
+      // Request microphone - must be in direct click handler
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
+
+      // Set up MediaRecorder for audio capture
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const recorder = new MediaRecorder(stream, { mimeType });
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(1000);
+
+      // Set up SpeechRecognition for live transcription
+      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SR) {
+        const recognition = new SR();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        recognition.onresult = (e: any) => {
+          let transcript = '';
+          for (let i = 0; i < e.results.length; i++) {
+            transcript += e.results[i][0].transcript;
+          }
+          setInput(transcript);
+        };
+        recognition.onerror = () => {
+          setRecording(false);
+        };
+        recognition.onend = () => {
+          // Don't set recording false here - let the stop button handle it
+        };
+        recognition.start();
+        recognitionRef.current = recognition;
       }
-      setInput(transcript);
-    };
-    recognition.onerror = () => setRecording(false);
-    recognition.onend = () => setRecording(false);
-    recognition.start();
-    recognitionRef.current = recognition;
-    setRecording(true);
-  };
+
+      setRecording(true);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        alert('Microphone access denied. Please allow microphone permissions in your browser settings.');
+      } else {
+        alert('Could not access microphone. Please try again.');
+      }
+      setRecording(false);
+    }
+  }, [recording]);
 
   const saveMemory = () => {
     if (messages.length < 2) return;
@@ -144,6 +194,13 @@ const ChatPage = () => {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {recording && (
+        <div className="flex items-center gap-2 mb-3 animate-fade-in">
+          <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
+          <span className="text-sm text-muted-foreground">Recording... speak now</span>
         </div>
       )}
 

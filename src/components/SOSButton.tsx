@@ -9,7 +9,7 @@ const SOSButton = () => {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-[88px] left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-full bg-destructive flex items-center justify-center shadow-lg sos-pulse transition-transform duration-300 hover:scale-110"
+        className="fixed bottom-24 right-4 z-50 w-16 h-16 rounded-full bg-destructive flex items-center justify-center shadow-lg sos-pulse transition-transform duration-200 hover:translateY-[-2px]"
         aria-label="SOS Emergency"
       >
         <AlertTriangle size={28} className="text-destructive-foreground" />
