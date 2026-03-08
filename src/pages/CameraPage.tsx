@@ -31,6 +31,13 @@ const getMemoryNames = (memory: { people: string[]; summary: string; conversatio
   return inferred;
 };
 
+const getVisualNeighborHashes = (referenceHashes: string[], candidateHashes: string[], maxRatio = 0.36) => {
+  if (referenceHashes.length === 0 || candidateHashes.length === 0) return [];
+  return candidateHashes.filter((candidateHash) =>
+    referenceHashes.some((referenceHash) => compareHashes(referenceHash, candidateHash).ratio <= maxRatio)
+  );
+};
+
 const CameraPage = () => {
   const { people, memories, addPerson, updatePerson, deletePerson, addAuditEntry, currentUser } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
