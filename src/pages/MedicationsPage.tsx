@@ -195,10 +195,15 @@ const MedicationsPage = () => {
 
   const commitAddMedication = () => {
     setPendingAlerts(null);
+    const dosesPerDay = times.length;
+    const qty = supplyQty ? parseInt(supplyQty) : undefined;
     addMedication({
       name: name.trim(), dosage: dosage.trim(), frequency, times,
       prescriber: prescriber.trim(), start_date: new Date().toISOString().split('T')[0],
       created_by: currentUser.id, last_modified_by: currentUser.id,
+      supply_quantity: qty,
+      doses_per_day: dosesPerDay,
+      supply_start_date: qty ? new Date().toISOString().split('T')[0] : undefined,
     });
     times.forEach(time => {
       addReminder({
@@ -212,9 +217,9 @@ const MedicationsPage = () => {
       timestamp: new Date().toISOString(), actor_id: currentUser.id,
       actor_name: `${currentUser.name} (${currentUser.role})`,
       action_type: 'medication_added', target_type: 'medication', target_id: '',
-      new_value: { name, dosage, times },
+      new_value: { name, dosage, times, supply: qty },
     });
-    setName(''); setDosage(''); setTimes(['08:00']); setPrescriber('');
+    setName(''); setDosage(''); setTimes(['08:00']); setPrescriber(''); setSupplyQty('');
     setShowForm(false);
   };
 
