@@ -32,24 +32,55 @@ const CameraPage = () => {
     };
   }, []);
 
-  // Build an extended people list that includes photo hashes from memories
-  const getPeopleWithMemoryHashes = useCallback(() => {
-    return people.map(p => {
-      // Gather image URLs from memories that mention this person
-      const memoryImages: string[] = [];
-      memories.forEach(m => {
-        if (m.people.includes(p.name) || m.summary.toLowerCase().includes(p.name.toLowerCase())) {
-          memoryImages.push(...m.image_urls);
+  useEffect(() => {
+    let active = true;
+
+    const buildMemoryHashes = async () => {
+      if (people.length === 0) {
+        if (active) setMemoryHashesByPerson({});
+        return;
+      }
+
+      setHashingMemoryPhotos(true);
+      const next: Record<string, string[]> = {};
+
+      for (const person of people) {
+        const relatedImages = memories
+          .filter(m => m.people.includes(person.name) || m.summary.toLowerCase().includes(person.name.toLowerCase()))
+          .flatMap(m => m.image_urls);
+
+        const uniqueImages = [...new Set(relatedImages)].slice(0, 15);
+        if (uniqueImages.length === 0) {
+          next[person.id] = [];
+          continue;
         }
-      });
-      return {
-        ...p,
-        // photo_hashes already includes camera photos; memory images are matched by URL overlap
-        photo_hashes: [...(p.photo_hashes || [])],
-        _memoryImageUrls: memoryImages,
-      };
-    });
+
+        const hashResults = await Promise.allSettled(uniqueImages.map(url => generatePerceptualHash(url)));
+        next[person.id] = hashResults
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+          .map(result => result.value);
+      }
+
+      if (active) {
+        setMemoryHashesByPerson(next);
+        setHashingMemoryPhotos(false);
+      }
+    };
+
+    void buildMemoryHashes();
+
+    return () => {
+      active = false;
+    };
   }, [people, memories]);
+
+  // Build an extended people list that includes perceptual hashes from memories
+  const getPeopleWithMemoryHashes = useCallback(() => {
+    return people.map(person => ({
+      ...person,
+      photo_hashes: [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])],
+    }));
+  }, [people, memoryHashesByPerson]);
 
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
