@@ -30,6 +30,13 @@ function loadState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+
+      const isLegacyDemo =
+        parsed?.currentUser?.email === 'margaret@example.com' ||
+        parsed?.users?.some?.((u: { email?: string }) => u.email === 'margaret@example.com');
+
+      if (isLegacyDemo) return defaultData();
+
       // Migrate: ensure photo_hashes exists on all people
       if (parsed.people) {
         parsed.people = parsed.people.map((p: Person) => ({
