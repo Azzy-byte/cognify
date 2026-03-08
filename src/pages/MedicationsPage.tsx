@@ -239,6 +239,7 @@ const MedicationsPage = () => {
       action_type: 'medication_added', target_type: 'medication', target_id: '',
       new_value: { name, dosage, times, supply: qty },
     });
+    notifyCaretaker('New medication added', name.trim(), `${dosage.trim()}, ${frequency}`);
     setName(''); setDosage(''); setTimes(['08:00']); setPrescriber(''); setSupplyQty('');
     setShowForm(false);
   };
