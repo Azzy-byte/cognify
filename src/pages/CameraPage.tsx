@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { Camera, RotateCcw, User, Check, Trash2, X, Pencil } from 'lucide-react';
@@ -19,6 +19,16 @@ const CameraPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
