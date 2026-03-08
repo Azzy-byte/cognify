@@ -131,7 +131,26 @@ const DoseChangeWarning = ({
 );
 
 const MedicationsPage = () => {
-  const { medications, reminders, currentUser, addMedication, updateMedication, deleteMedication, addReminder, updateReminder, deleteReminder, addAuditEntry, canEdit } = useApp();
+  const { medications, reminders, contacts, currentUser, addMedication, updateMedication, deleteMedication, addReminder, updateReminder, deleteReminder, addAuditEntry, canEdit } = useApp();
+
+  const notifyCaretaker = useCallback((action: string, medName: string, details?: string) => {
+    const emergencyContacts = contacts.filter(c => c.is_emergency);
+    if (emergencyContacts.length === 0) return;
+    const names = emergencyContacts.map(c => c.name).join(', ');
+    toast.warning(`⚠️ Caretaker Alert Sent`, {
+      description: `${action}: ${medName}${details ? ` — ${details}` : ''}. Notified: ${names}`,
+      duration: 5000,
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'caretaker_notified',
+      target_type: 'medication',
+      target_id: '',
+      new_value: { action, medication: medName, details, contacts_notified: emergencyContacts.map(c => c.name) },
+    });
+  }, [contacts, currentUser, addAuditEntry]);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'medication' | 'routine'>('medication');
   const [name, setName] = useState('');
