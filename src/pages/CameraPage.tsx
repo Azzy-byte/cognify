@@ -189,7 +189,46 @@ const CameraPage = () => {
     setAnalyzing(true);
     try {
       const hash = await generatePerceptualHash(dataUrl);
-      const extendedPeople = getPeopleWithMemoryHashes();
+      let extendedPeople = getPeopleWithMemoryHashes();
+
+      // Fallback: if memory indexing is still cold, compute directly from memories now
+      const hasAnyHashes = extendedPeople.some(p => (p.photo_hashes?.length || 0) > 0);
+      if (!hasAnyHashes && memories.length > 0) {
+        const derivedByName = new Map<string, { id: string; name: string; relationship: string; photo_hashes: string[] }>();
+        for (const memory of memories) {
+          if (!memory.image_urls.length || !memory.people.length) continue;
+          const hashResults = await Promise.allSettled(
+            [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
+          );
+          const memoryHashes = hashResults
+            .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+            .map(result => result.value);
+
+          for (const rawName of memory.people) {
+            const trimmedName = rawName.trim();
+            if (!trimmedName) continue;
+            const key = trimmedName.toLowerCase();
+            const existing = derivedByName.get(key);
+            derivedByName.set(key, {
+              id: existing?.id ?? `memory-${key.replace(/\s+/g, '-')}`,
+              name: existing?.name ?? trimmedName,
+              relationship: existing?.relationship ?? 'From memories',
+              photo_hashes: [...new Set([...(existing?.photo_hashes ?? []), ...memoryHashes])],
+            });
+          }
+        }
+
+        const knownNames = new Set(people.map(p => p.name.toLowerCase()));
+        const memoryOnlyPeople = Array.from(derivedByName.values()).filter(p => !knownNames.has(p.name.toLowerCase()));
+        extendedPeople = [
+          ...people.map(person => ({
+            ...person,
+            photo_hashes: [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])],
+          })),
+          ...memoryOnlyPeople,
+        ];
+      }
+
       const result = findMatch(hash, extendedPeople);
       setMatchResult(result);
       if (!result.recognized) setShowForm(true);
@@ -198,7 +237,7 @@ const CameraPage = () => {
       setMatchResult({ recognized: false });
     }
     setAnalyzing(false);
-  }, [stopCamera, getPeopleWithMemoryHashes]);
+  }, [stopCamera, getPeopleWithMemoryHashes, memories, people, memoryHashesByPerson]);
 
   const confirmMatch = async () => {
     if (!matchResult?.name || !photo) return;
