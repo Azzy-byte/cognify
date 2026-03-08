@@ -33,8 +33,21 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
         triggerSOS(type, loc);
       },
       () => {
-        triggerSOS(type, { lat: 0, lng: 0 });
-      }
+        // Try to get a cached position for directions
+        navigator.geolocation?.getCurrentPosition(
+          (pos) => {
+            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            setCurrentPos(loc);
+            triggerSOS(type, loc);
+          },
+          () => {
+            setCurrentPos({ lat: 0, lng: 0 });
+            triggerSOS(type, { lat: 0, lng: 0 });
+          },
+          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
@@ -60,7 +73,7 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
 
     // Alert each emergency contact
     emergencyContacts.forEach(contact => {
-      toast.error(`🚨 SOS Alert sent to ${contact.name}!`, {
+      toast.error(`SOS Alert sent to ${contact.name}!`, {
         description: `${currentUser.name} triggered a ${type} emergency${loc.lat !== 0 ? ` at location (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})` : ''}.`,
         duration: 8000,
       });
@@ -74,18 +87,35 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
   };
 
   const getHomeDirections = () => {
-    if (!currentPos || currentPos.lat === 0) {
-      toast.info('Location not available. Please enable GPS.');
-      return;
-    }
     const homeZone = safeZones.find(z => z.name.toLowerCase().includes('home')) || safeZones[0];
     if (!homeZone) {
       toast.info('No home location set. Add a safe zone on the Map page.');
       return;
     }
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&origin=${currentPos.lat},${currentPos.lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`,
-      '_blank'
+
+    const openDirections = (lat: number, lng: number) => {
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`,
+        '_blank'
+      );
+    };
+
+    if (currentPos && currentPos.lat !== 0) {
+      openDirections(currentPos.lat, currentPos.lng);
+      return;
+    }
+
+    // Try to get fresh location
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCurrentPos(loc);
+        openDirections(loc.lat, loc.lng);
+      },
+      () => {
+        toast.info('Location not available. Please enable GPS.');
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
     );
   };
 
