@@ -375,6 +375,11 @@ const MedicationsPage = () => {
                 <button onClick={() => setTimes(prev => [...prev, '12:00'])} className="text-sm text-soft-pink hover:underline min-h-[44px]">+ Add time</button>
               </div>
               <input value={prescriber} onChange={e => setPrescriber(e.target.value)} placeholder="Prescriber" className="input-glass w-full" />
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Supply quantity (optional)</label>
+                <input type="number" value={supplyQty} onChange={e => setSupplyQty(e.target.value)} placeholder="e.g., 30 tablets" className="input-glass w-full" min="1" />
+                <p className="text-xs text-muted-foreground mt-1">We will alert you when your supply is running low.</p>
+              </div>
               <button onClick={attemptAddMedication} className="btn-primary w-full min-h-[48px] active:scale-95">Add Medication</button>
             </div>
           ) : (
