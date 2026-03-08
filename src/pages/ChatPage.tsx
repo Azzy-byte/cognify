@@ -67,7 +67,7 @@ const TypingIndicator = () => (
 );
 
 const ChatPage = () => {
-  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addAuditEntry } = useApp();
+  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addReminder, addAuditEntry } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
