@@ -44,6 +44,39 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)}km away`;
 }
 
+function detectCircularMovement(points: Array<{ lat: number; lng: number; at: number }>): boolean {
+  if (points.length < 8) return false;
+
+  const centroid = points.reduce(
+    (acc, point) => ({ lat: acc.lat + point.lat / points.length, lng: acc.lng + point.lng / points.length }),
+    { lat: 0, lng: 0 }
+  );
+
+  const radii = points.map(p => getDistance(p.lat, p.lng, centroid.lat, centroid.lng));
+  const avgRadius = radii.reduce((sum, radius) => sum + radius, 0) / radii.length;
+  if (avgRadius < 20 || avgRadius > 180) return false;
+
+  const variance = radii.reduce((sum, radius) => sum + (radius - avgRadius) ** 2, 0) / radii.length;
+  const stdDev = Math.sqrt(variance);
+
+  let pathLength = 0;
+  for (let i = 1; i < points.length; i++) {
+    pathLength += getDistance(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+  }
+
+  const netDistance = getDistance(
+    points[0].lat,
+    points[0].lng,
+    points[points.length - 1].lat,
+    points[points.length - 1].lng
+  );
+
+  const consistentRadius = stdDev / avgRadius < 0.35;
+  const loopingPattern = pathLength > avgRadius * 4 && netDistance < avgRadius * 1.8;
+
+  return consistentRadius && loopingPattern;
+}
+
 // Component to handle map clicks for adding pins
 function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   useMapEvents({
