@@ -11,92 +11,118 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
   useEffect(() => {
     const blink = () => {
       setBlinking(true);
-      setTimeout(() => setBlinking(false), 100);
+      setTimeout(() => setBlinking(false), 120);
     };
 
     const interval = setInterval(() => {
       blink();
-      if (Math.random() > 0.8) setTimeout(blink, 160);
-    }, 3800 + Math.random() * 1800);
+      if (Math.random() > 0.7) {
+        setTimeout(blink, 200);
+      }
+    }, 3200 + Math.random() * 2000);
 
     return () => clearInterval(interval);
   }, []);
 
-  const eyeScaleY = blinking ? 0.07 : 1;
+  const eyeScaleY = blinking ? 0.12 : 1;
 
   return (
     <div className="flex flex-col items-center gap-4 py-8">
       <div className="brain-sway" aria-hidden="true">
-        <svg width="220" height="230" viewBox="0 0 220 230" fill="none" xmlns="http://www.w3.org/2000/svg">
-          {/* ground shadow */}
-          <ellipse cx="110" cy="214" rx="36" ry="7" fill="hsl(var(--foreground) / 0.12)" />
+        <svg width="200" height="220" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Shadow */}
+          <ellipse cx="100" cy="210" rx="40" ry="6" fill="hsl(340 20% 70%)" opacity="0.2" />
 
-          {/* legs */}
-          <rect x="92" y="176" width="14" height="24" rx="6" fill="hsl(var(--primary) / 0.34)" />
-          <rect x="114" y="176" width="14" height="24" rx="6" fill="hsl(var(--primary) / 0.34)" />
+          {/* Left leg */}
+          <rect x="72" y="172" width="16" height="28" rx="8" fill="hsl(350 80% 82%)" />
+          {/* Right leg */}
+          <rect x="112" y="172" width="16" height="28" rx="8" fill="hsl(350 80% 82%)" />
+          {/* Left shoe */}
+          <ellipse cx="78" cy="200" rx="14" ry="8" fill="hsl(350 70% 76%)" />
+          {/* Right shoe */}
+          <ellipse cx="122" cy="200" rx="14" ry="8" fill="hsl(350 70% 76%)" />
 
-          {/* brain head (rounded cloud style) */}
+          {/* Body / lower brain */}
+          <ellipse cx="100" cy="150" rx="42" ry="32" fill="hsl(340 65% 82%)" />
+
+          {/* Left arm */}
+          <path d="M58 140 C48 145, 38 155, 42 168 C44 174, 50 175, 52 170 C54 164, 52 158, 58 148" fill="hsl(350 80% 82%)" stroke="hsl(340 60% 72%)" strokeWidth="1.5" />
+          {/* Left hand (open palm) */}
+          <circle cx="47" cy="168" r="7" fill="hsl(350 80% 84%)" />
+          <circle cx="42" cy="164" r="3" fill="hsl(350 80% 86%)" />
+          <circle cx="44" cy="160" r="2.5" fill="hsl(350 80% 86%)" />
+
+          {/* Right arm */}
+          <path d="M142 140 C152 145, 162 155, 158 168 C156 174, 150 175, 148 170 C146 164, 148 158, 142 148" fill="hsl(350 80% 82%)" stroke="hsl(340 60% 72%)" strokeWidth="1.5" />
+          {/* Right hand waving */}
+          <circle cx="153" cy="168" r="7" fill="hsl(350 80% 84%)" />
+          <circle cx="158" cy="164" r="3" fill="hsl(350 80% 86%)" />
+          <circle cx="156" cy="160" r="2.5" fill="hsl(350 80% 86%)" />
+
+          {/* Brain blob (head) */}
           <path
-            d="M110 28C122 18 138 18 149 27C163 25 176 35 178 49C189 54 194 65 192 77C196 90 188 103 176 108C169 120 156 126 143 124H77C64 126 51 120 44 108C32 103 24 90 28 77C26 65 31 54 42 49C44 35 57 25 71 27C82 18 98 18 110 28Z"
-            fill="hsl(var(--accent))"
+            d="M100 22C122 10 148 16 160 34C176 36 188 50 186 66C186 72 184 78 180 82C188 94 186 110 176 120C174 136 162 148 146 150H54C38 148 26 136 24 120C14 110 12 94 20 82C16 78 14 72 14 66C14 50 24 36 40 34C52 16 78 10 100 22Z"
+            fill="hsl(340 68% 84%)"
           />
 
-          {/* center fold */}
-          <path d="M110 31V79" stroke="hsl(var(--primary) / 0.42)" strokeWidth="4" strokeLinecap="round" />
-          <path d="M90 40C98 32 106 32 110 40" stroke="hsl(var(--primary) / 0.42)" strokeWidth="4" strokeLinecap="round" />
-          <path d="M130 40C122 32 114 32 110 40" stroke="hsl(var(--primary) / 0.42)" strokeWidth="4" strokeLinecap="round" />
+          {/* Brain highlight (shiny top) */}
+          <ellipse cx="85" cy="45" rx="22" ry="12" fill="hsl(340 70% 90%)" opacity="0.5" />
 
-          {/* ears */}
-          <path d="M46 80C40 86 40 95 46 101" stroke="hsl(var(--primary) / 0.4)" strokeWidth="5" strokeLinecap="round" />
-          <path d="M174 80C180 86 180 95 174 101" stroke="hsl(var(--primary) / 0.4)" strokeWidth="5" strokeLinecap="round" />
+          {/* Brain folds */}
+          <path d="M100 30V75" stroke="hsl(340 55% 72%)" strokeWidth="4" strokeLinecap="round" />
+          <path d="M75 38C85 28 95 28 100 40" stroke="hsl(340 55% 72%)" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M125 38C115 28 105 28 100 40" stroke="hsl(340 55% 72%)" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M65 55C75 48 88 52 92 60" stroke="hsl(340 55% 72%)" strokeWidth="3" strokeLinecap="round" />
+          <path d="M135 55C125 48 112 52 108 60" stroke="hsl(340 55% 72%)" strokeWidth="3" strokeLinecap="round" />
 
-          {/* eyebrows */}
-          <path d="M83 88C88 84 96 84 101 88" stroke="hsl(var(--foreground) / 0.6)" strokeWidth="5" strokeLinecap="round" />
-          <path d="M119 88C124 84 132 84 137 88" stroke="hsl(var(--foreground) / 0.6)" strokeWidth="5" strokeLinecap="round" />
+          {/* Cute ears */}
+          <path d="M30 90C22 96 22 108 30 114" stroke="hsl(340 60% 72%)" strokeWidth="5" strokeLinecap="round" />
+          <path d="M170 90C178 96 178 108 170 114" stroke="hsl(340 60% 72%)" strokeWidth="5" strokeLinecap="round" />
 
-          {/* eyes */}
-          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '92px 104px', transition: 'transform 0.09s ease-in-out' }}>
-            <circle cx="92" cy="104" r="16" fill="hsl(var(--background))" />
-            <circle cx="96" cy="107" r="8.5" fill="hsl(var(--foreground) / 0.75)" />
-            <circle cx="99" cy="104" r="3" fill="hsl(var(--background))" />
+          {/* Eyes */}
+          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '78px 100px', transition: 'transform 0.1s ease-in-out' }}>
+            <ellipse cx="78" cy="100" rx="14" ry="15" fill="white" />
+            <circle cx="82" cy="102" r="8" fill="hsl(232 47% 38%)" />
+            <circle cx="85" cy="99" r="3" fill="white" />
+            <circle cx="80" cy="105" r="1.5" fill="white" opacity="0.6" />
           </g>
-          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '128px 104px', transition: 'transform 0.09s ease-in-out' }}>
-            <circle cx="128" cy="104" r="16" fill="hsl(var(--background))" />
-            <circle cx="132" cy="107" r="8.5" fill="hsl(var(--foreground) / 0.75)" />
-            <circle cx="135" cy="104" r="3" fill="hsl(var(--background))" />
+          <g style={{ transform: `scaleY(${eyeScaleY})`, transformOrigin: '122px 100px', transition: 'transform 0.1s ease-in-out' }}>
+            <ellipse cx="122" cy="100" rx="14" ry="15" fill="white" />
+            <circle cx="126" cy="102" r="8" fill="hsl(232 47% 38%)" />
+            <circle cx="129" cy="99" r="3" fill="white" />
+            <circle cx="124" cy="105" r="1.5" fill="white" opacity="0.6" />
           </g>
 
-          {/* nose and blush */}
-          <rect x="106" y="116" width="8" height="4" rx="2" fill="hsl(var(--primary) / 0.5)" />
-          <circle cx="72" cy="122" r="3" fill="hsl(var(--primary) / 0.4)" />
-          <circle cx="78" cy="126" r="3" fill="hsl(var(--primary) / 0.4)" />
-          <circle cx="148" cy="122" r="3" fill="hsl(var(--primary) / 0.4)" />
-          <circle cx="142" cy="126" r="3" fill="hsl(var(--primary) / 0.4)" />
+          {/* Eyebrows (friendly arched) */}
+          <path d="M66 84C72 78 84 78 90 84" stroke="hsl(230 35% 40%)" strokeWidth="3" strokeLinecap="round" />
+          <path d="M110 84C116 78 128 78 134 84" stroke="hsl(230 35% 40%)" strokeWidth="3" strokeLinecap="round" />
 
-          {/* notepad */}
-          <rect x="92" y="122" width="36" height="54" rx="8" fill="hsl(var(--secondary))" />
-          <rect x="92" y="122" width="36" height="9" rx="5" fill="hsl(var(--primary) / 0.6)" />
+          {/* Cute button nose */}
+          <ellipse cx="100" cy="118" rx="5" ry="4" fill="hsl(350 75% 72%)" />
+          <circle cx="97" cy="117" r="1.5" fill="hsl(350 80% 78%)" />
 
-          {/* hands */}
-          <ellipse cx="86" cy="146" rx="8" ry="10" fill="hsl(var(--primary) / 0.34)" />
-          <ellipse cx="134" cy="146" rx="8" ry="10" fill="hsl(var(--primary) / 0.34)" />
+          {/* Happy smile */}
+          <path d="M88 128C94 137 106 137 112 128" stroke="hsl(230 35% 35%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
-          {/* pencil */}
-          <rect x="138" y="138" width="7" height="20" rx="2" transform="rotate(-32 138 138)" fill="hsl(var(--accent-foreground) / 0.7)" />
-          <polygon points="151,151 156,153 151,158" fill="hsl(var(--secondary-foreground) / 0.45)" />
+          {/* Blush cheeks */}
+          <ellipse cx="60" cy="118" rx="10" ry="7" fill="hsl(350 90% 78%)" opacity="0.4" />
+          <ellipse cx="140" cy="118" rx="10" ry="7" fill="hsl(350 90% 78%)" opacity="0.4" />
+
+          {/* Sparkle decorations */}
+          <g opacity="0.6">
+            <path d="M168 50L170 44L172 50L178 52L172 54L170 60L168 54L162 52Z" fill="hsl(45 90% 65%)" />
+            <path d="M28 60L30 56L32 60L36 62L32 64L30 68L28 64L24 62Z" fill="hsl(45 90% 65%)" />
+          </g>
         </svg>
       </div>
-
       <div className="text-center">
         <h2 className="text-xl font-semibold mb-1 text-foreground">
-          {greeting || `Hello${userName ? `, ${userName}` : ''}`}
+          {greeting || `Hello${userName ? `, ${userName}` : ''} 👋`}
         </h2>
-        <p className="text-muted-foreground">I’m here with you — we can chat anytime.</p>
+        <p className="text-muted-foreground">I'm Cognify, your AI companion. Ask me anything!</p>
       </div>
     </div>
   );
 };
 
 export default BrainCharacter;
-
-
