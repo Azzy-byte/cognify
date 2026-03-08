@@ -182,7 +182,7 @@ const MedicationsPage = () => {
 
     toast.warning('Caretaker alert sent', {
       description: `${action}: ${medName}${details ? ` — ${details}` : ''}. Notified: ${names}`,
-      duration: 6000,
+      duration: 3000,
     });
 
     if ('Notification' in window && Notification.permission === 'granted') {
