@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, X, Pencil, Trash2, Plus } from 'lucide-react';
+import { Search, X, Pencil, Trash2, Plus, BookOpen } from 'lucide-react';
 import type { Memory } from '@/types';
 
 const categories = ['All', 'Family', 'Social', 'Health', 'General'] as const;
@@ -16,6 +16,86 @@ function timeAgo(dateStr: string): string {
   if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
   return `${Math.floor(days / 30)} months ago`;
 }
+
+const MemoryCard = ({ memory, onClick, index }: { memory: Memory; onClick: () => void; index: number }) => {
+  const hasImages = memory.image_urls.length > 0;
+  
+  return (
+    <div
+      className="break-inside-avoid mb-4 cursor-pointer group"
+      onClick={onClick}
+      style={{
+        opacity: 0,
+        animation: `chat-slide-up 0.3s ease-out ${index * 0.05}s forwards`,
+      }}
+    >
+      <div className="glass-card-hover overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
+        {hasImages && (
+          <div className="relative overflow-hidden">
+            <img
+              src={memory.image_urls[0]}
+              alt="Memory"
+              className="w-full object-cover group-hover:scale-105 transition-transform duration-500"
+              style={{ height: index % 3 === 0 ? '240px' : '180px' }}
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <p className="text-destructive-foreground text-base font-medium line-clamp-2 drop-shadow-lg">
+                {memory.summary}
+              </p>
+            </div>
+            {/* Decorative corner diamond */}
+            <svg className="absolute top-3 right-3 w-8 h-8 opacity-30" viewBox="0 0 32 32">
+              <path d="M16 4 L24 12 L16 20 L8 12 Z" fill="hsl(var(--destructive-foreground))" />
+            </svg>
+          </div>
+        )}
+
+        <div className={`p-4 space-y-3 ${hasImages ? '-mt-3 pt-6' : ''}`}>
+          {!hasImages && (
+            <p className="font-medium line-clamp-3 text-foreground">{memory.summary}</p>
+          )}
+
+          {memory.audio_url && (
+            <div className="bg-soft-pink/10 rounded-2xl p-3">
+              <audio src={memory.audio_url} controls className="w-full h-8" />
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-1.5">
+            {memory.people.map(p => (
+              <span key={p} className="px-3 py-1 bg-lavender/20 text-foreground rounded-full text-xs font-medium">
+                {p}
+              </span>
+            ))}
+            <span className="px-3 py-1 bg-soft-pink/15 text-foreground rounded-full text-xs">
+              {memory.category}
+            </span>
+          </div>
+
+          <p className="text-xs text-muted-foreground">{timeAgo(memory.created_at)}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-6 text-center animate-fade-in">
+    <div className="w-20 h-20 rounded-full bg-lavender/20 flex items-center justify-center mb-6">
+      <BookOpen size={36} className="text-lavender" />
+    </div>
+    <h3 className="text-xl font-semibold text-foreground mb-2">Your memories will live here</h3>
+    <p className="text-muted-foreground mb-6 max-w-xs">
+      Every conversation, photo, and moment you save will appear in your personal memory collection.
+    </p>
+    <button onClick={onAdd} className="btn-primary flex items-center gap-2">
+      <Plus size={18} />
+      <span>Create your first memory</span>
+    </button>
+  </div>
+);
 
 const MemoriesPage = () => {
   const { memories, currentUser, canEdit, addMemory, updateMemory, deleteMemory, addAuditEntry } = useApp();
@@ -116,8 +196,12 @@ const MemoriesPage = () => {
   return (
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Memories</h1>
-        <button onClick={() => { setShowAdd(!showAdd); setEditingId(null); }} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Add memory">
+        <h1 className="text-2xl font-bold text-foreground">Memories</h1>
+        <button
+          onClick={() => { setShowAdd(!showAdd); setEditingId(null); }}
+          className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95"
+          aria-label="Add memory"
+        >
           {showAdd ? <X size={22} /> : <Plus size={22} />}
         </button>
       </div>
@@ -157,36 +241,18 @@ const MemoriesPage = () => {
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {categories.map(c => (
           <button key={c} onClick={() => setCategory(c)}
-            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] ${category === c ? 'bg-soft-pink/30 text-foreground' : ''}`}>
+            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] active:scale-95 ${category === c ? 'bg-soft-pink/30 text-foreground' : ''}`}>
             {c}
           </button>
         ))}
       </div>
 
       {filtered.length === 0 ? (
-        <GlassCard className="p-8 text-center"><p className="text-muted-foreground">No memories yet. Add your first one!</p></GlassCard>
+        <EmptyState onAdd={() => setShowAdd(true)} />
       ) : (
-        <div className="space-y-3">
-          {filtered.map(memory => (
-            <GlassCard key={memory.id} className="p-4 cursor-pointer glass-card-hover" onClick={() => setSelectedMemory(memory)}>
-              {memory.image_urls.length > 0 && (
-                <div className="grid grid-cols-3 gap-1 mb-2 -mx-1 -mt-1">
-                  {memory.image_urls.slice(0, 3).map((url, j) => (
-                    <img key={j} src={url} alt="Memory photo" className="w-full h-20 object-cover" style={{ borderRadius: 'var(--radius-sm)' }} loading="lazy" />
-                  ))}
-                </div>
-              )}
-              <p className="font-medium line-clamp-2">{memory.summary}</p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {memory.people.map(p => (
-                  <span key={p} className="pill-badge text-xs">{p}</span>
-                ))}
-              </div>
-              <div className="flex justify-between items-center text-xs text-muted-foreground mt-2">
-                <span className="pill-badge">{memory.category}</span>
-                <span>{timeAgo(memory.created_at)}</span>
-              </div>
-            </GlassCard>
+        <div className="columns-2 gap-3">
+          {filtered.map((memory, i) => (
+            <MemoryCard key={memory.id} memory={memory} onClick={() => setSelectedMemory(memory)} index={i} />
           ))}
         </div>
       )}
