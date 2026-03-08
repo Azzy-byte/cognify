@@ -33,8 +33,21 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
         triggerSOS(type, loc);
       },
       () => {
-        triggerSOS(type, { lat: 0, lng: 0 });
-      }
+        // Try to get a cached position for directions
+        navigator.geolocation?.getCurrentPosition(
+          (pos) => {
+            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            setCurrentPos(loc);
+            triggerSOS(type, loc);
+          },
+          () => {
+            setCurrentPos({ lat: 0, lng: 0 });
+            triggerSOS(type, { lat: 0, lng: 0 });
+          },
+          { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
