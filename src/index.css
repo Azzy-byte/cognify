@@ -187,39 +187,39 @@
 .orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(120px);
+  filter: blur(80px);
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
 }
 .orb-1 {
-  width: 700px;
-  height: 700px;
+  width: 500px;
+  height: 500px;
   background: hsl(var(--soft-pink));
-  opacity: 0.2;
-  top: -200px; left: -200px;
+  opacity: 0.35;
+  top: -150px; left: -150px;
   animation: orb-float-1 45s ease-in-out infinite;
 }
 .orb-2 {
-  width: 600px;
-  height: 600px;
+  width: 450px;
+  height: 450px;
   background: hsl(var(--sky-blue));
-  opacity: 0.15;
-  top: 40%; right: -200px;
+  opacity: 0.3;
+  top: 40%; right: -150px;
   animation: orb-float-2 55s ease-in-out infinite;
 }
 .orb-3 {
-  width: 700px;
-  height: 700px;
+  width: 500px;
+  height: 500px;
   background: hsl(var(--mint));
-  opacity: 0.15;
-  bottom: -200px; left: 30%;
+  opacity: 0.3;
+  bottom: -150px; left: 30%;
   animation: orb-float-3 50s ease-in-out infinite;
 }
 .orb-4 {
-  width: 500px;
-  height: 500px;
+  width: 400px;
+  height: 400px;
   background: hsl(var(--lavender));
-  opacity: 0.12;
+  opacity: 0.25;
   top: 20%; left: 50%;
   animation: orb-float-4 60s ease-in-out infinite;
 }

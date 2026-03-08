@@ -20,6 +20,16 @@ const CameraPage = () => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
 
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());

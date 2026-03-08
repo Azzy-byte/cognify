@@ -292,7 +292,5 @@ const MapPage = () => {
   );
 };
 
-// Need React import for React.Fragment
-import React from 'react';
 
 export default MapPage;
