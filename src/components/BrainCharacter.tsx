@@ -6,57 +6,79 @@ interface BrainCharacterProps {
 const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => (
   <div className="flex flex-col items-center gap-4 py-8">
     <div className="brain-idle">
-      <svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Brain body - rounder, softer */}
-        <ellipse cx="70" cy="62" rx="36" ry="34" fill="hsl(var(--soft-pink))" />
+      <svg width="160" height="170" viewBox="0 0 160 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Brain body - big, round, cute pink */}
+        <ellipse cx="80" cy="65" rx="52" ry="48" fill="hsl(var(--soft-pink))" />
+
+        {/* Brain left hemisphere highlight */}
+        <ellipse cx="62" cy="50" rx="28" ry="30" fill="hsl(350 100% 88%)" opacity="0.5" />
+
+        {/* Brain folds - center line */}
+        <path d="M80 22v30" stroke="hsl(350 60% 75%)" strokeWidth="2.5" strokeLinecap="round" opacity="0.5" />
         
-        {/* Soft brain folds */}
-        <path d="M46 50c6-6 12-8 24-8s18 2 24 8" stroke="hsl(350 80% 80%)" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6" />
-        <path d="M50 58c5-4 10-6 20-6s15 2 20 6" stroke="hsl(350 80% 80%)" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
+        {/* Brain fold curves */}
+        <path d="M55 38c8-6 18-8 25-6" stroke="hsl(350 60% 75%)" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.4" />
+        <path d="M80 38c7-4 17-6 25-4" stroke="hsl(350 60% 75%)" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.4" />
+        <path d="M48 52c10-4 18-5 25-2" stroke="hsl(350 60% 75%)" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.3" />
+        <path d="M87 50c8-3 16-4 22-1" stroke="hsl(350 60% 75%)" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.3" />
         
-        {/* Top bump */}
-        <path d="M58 30c3-4 8-6 12-6s9 2 12 6" stroke="hsl(350 80% 80%)" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5" />
-        <path d="M70 26v6" stroke="hsl(350 80% 80%)" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+        {/* Eyebrows - expressive arched */}
+        <path d="M54 58c3-5 10-6 14-3" stroke="hsl(var(--foreground))" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        <path d="M92 58c3-5 10-6 14-3" stroke="hsl(var(--foreground))" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+
+        {/* Big round eyes - dark navy blue like reference */}
+        <ellipse cx="65" cy="72" rx="8" ry="9" fill="hsl(230 50% 25%)" />
+        <ellipse cx="97" cy="72" rx="8" ry="9" fill="hsl(230 50% 25%)" />
         
-        {/* Big sparkly eyes */}
-        <ellipse cx="58" cy="56" rx="5" ry="5.5" fill="hsl(var(--foreground))" />
-        <ellipse cx="82" cy="56" rx="5" ry="5.5" fill="hsl(var(--foreground))" />
-        {/* Eye highlights */}
-        <circle cx="56" cy="54" r="2" fill="white" />
-        <circle cx="80" cy="54" r="2" fill="white" />
-        <circle cx="60" cy="58" r="1" fill="white" opacity="0.6" />
-        <circle cx="84" cy="58" r="1" fill="white" opacity="0.6" />
+        {/* Eye white highlights - big */}
+        <circle cx="62" cy="69" r="3.5" fill="white" />
+        <circle cx="94" cy="69" r="3.5" fill="white" />
+        {/* Small secondary highlights */}
+        <circle cx="67" cy="75" r="1.5" fill="white" opacity="0.7" />
+        <circle cx="99" cy="75" r="1.5" fill="white" opacity="0.7" />
+
+        {/* Cute tiny smile */}
+        <path d="M72 86c3 4 13 4 16 0" stroke="hsl(var(--foreground))" strokeWidth="2" strokeLinecap="round" fill="none" />
         
-        {/* Cute tiny nose */}
-        <ellipse cx="70" cy="64" rx="2" ry="1.5" fill="hsl(350 70% 75%)" opacity="0.5" />
+        {/* Rosy cheeks - pink dots like reference */}
+        <circle cx="48" cy="80" r="6" fill="hsl(350 80% 80%)" opacity="0.5" />
+        <circle cx="112" cy="80" r="6" fill="hsl(350 80% 80%)" opacity="0.5" />
+        {/* Extra cheek dots pattern */}
+        <circle cx="44" cy="78" r="1.5" fill="hsl(350 70% 75%)" opacity="0.4" />
+        <circle cx="46" cy="83" r="1.5" fill="hsl(350 70% 75%)" opacity="0.4" />
+        <circle cx="50" cy="76" r="1.5" fill="hsl(350 70% 75%)" opacity="0.4" />
+        <circle cx="110" cy="78" r="1.5" fill="hsl(350 70% 75%)" opacity="0.4" />
+        <circle cx="114" cy="83" r="1.5" fill="hsl(350 70% 75%)" opacity="0.4" />
+        <circle cx="116" cy="78" r="1.5" fill="hsl(350 70% 75%)" opacity="0.4" />
+
+        {/* Left arm holding a notepad */}
+        <path d="M30 85c-8 2-14 10-12 18" stroke="hsl(var(--soft-pink))" strokeWidth="4" strokeLinecap="round" fill="none" />
+        <circle cx="18" cy="103" r="5" fill="hsl(var(--soft-pink))" />
         
-        {/* Happy smile */}
-        <path d="M60 70c4 5 16 5 20 0" stroke="hsl(var(--foreground))" strokeWidth="2" strokeLinecap="round" fill="none" />
+        {/* Notepad the brain is holding */}
+        <rect x="8" y="88" width="28" height="34" rx="3" fill="hsl(45 80% 90%)" stroke="hsl(45 60% 80%)" strokeWidth="1" />
+        <line x1="14" y1="96" x2="30" y2="96" stroke="hsl(45 40% 75%)" strokeWidth="1" opacity="0.5" />
+        <line x1="14" y1="102" x2="28" y2="102" stroke="hsl(45 40% 75%)" strokeWidth="1" opacity="0.5" />
+        <line x1="14" y1="108" x2="26" y2="108" stroke="hsl(45 40% 75%)" strokeWidth="1" opacity="0.5" />
+
+        {/* Right arm with pencil */}
+        <path d="M130 85c8 2 14 10 12 18" stroke="hsl(var(--soft-pink))" strokeWidth="4" strokeLinecap="round" fill="none" />
+        <circle cx="142" cy="103" r="5" fill="hsl(var(--soft-pink))" />
         
-        {/* Rosy cheeks */}
-        <circle cx="50" cy="66" r="5" fill="hsl(350 80% 85%)" opacity="0.45" />
-        <circle cx="90" cy="66" r="5" fill="hsl(350 80% 85%)" opacity="0.45" />
-        
-        {/* Little arms waving */}
-        <path d="M34 68c-6 0-10 5-8 10" stroke="hsl(var(--soft-pink))" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <circle cx="26" cy="78" r="3.5" fill="hsl(var(--soft-pink))" />
-        <path d="M106 68c6 0 10 5 8 10" stroke="hsl(var(--soft-pink))" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <circle cx="114" cy="78" r="3.5" fill="hsl(var(--soft-pink))" />
-        
+        {/* Pencil */}
+        <rect x="138" y="86" width="4" height="22" rx="1" fill="hsl(var(--lavender))" transform="rotate(-15 140 97)" />
+        <polygon points="137,108 143,108 140,114" fill="hsl(45 80% 80%)" transform="rotate(-15 140 111)" />
+
         {/* Stubby legs */}
-        <line x1="58" y1="94" x2="56" y2="108" stroke="hsl(var(--soft-pink))" strokeWidth="4" strokeLinecap="round" />
-        <ellipse cx="54" cy="110" rx="6" ry="3.5" fill="hsl(var(--soft-pink))" />
-        <line x1="82" y1="94" x2="84" y2="108" stroke="hsl(var(--soft-pink))" strokeWidth="4" strokeLinecap="round" />
-        <ellipse cx="86" cy="110" rx="6" ry="3.5" fill="hsl(var(--soft-pink))" />
-        
-        {/* Sparkle decorations */}
-        <text x="28" y="44" fontSize="14" opacity="0.6">✨</text>
-        <text x="104" y="40" fontSize="10" opacity="0.5">💕</text>
+        <line x1="65" y1="110" x2="62" y2="130" stroke="hsl(var(--soft-pink))" strokeWidth="5" strokeLinecap="round" />
+        <ellipse cx="60" cy="133" rx="8" ry="4" fill="hsl(var(--soft-pink))" />
+        <line x1="95" y1="110" x2="98" y2="130" stroke="hsl(var(--soft-pink))" strokeWidth="5" strokeLinecap="round" />
+        <ellipse cx="100" cy="133" rx="8" ry="4" fill="hsl(var(--soft-pink))" />
       </svg>
     </div>
     <div className="text-center">
-      <h2 className="text-xl font-semibold mb-1">
-        {greeting || `Hello${userName ? `, ${userName}` : ''}! 💗`}
+      <h2 className="text-xl font-semibold mb-1 text-foreground">
+        {greeting || `Hello${userName ? `, ${userName}` : ''}`}
       </h2>
       <p className="text-muted-foreground">Tell me about your day, share photos, or use voice to chat.</p>
     </div>
