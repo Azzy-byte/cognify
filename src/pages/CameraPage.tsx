@@ -76,22 +76,26 @@ const CameraPage = () => {
       const next: Record<string, string[]> = {};
       const derivedByName = new Map<string, { id: string; name: string; relationship: string; photo_hashes: string[] }>();
 
+      const allMemoryImageUrls = [...new Set(memories.flatMap((memory) => memory.image_urls))].slice(0, 200);
+      const allHashResults = await Promise.allSettled(allMemoryImageUrls.map((url) => generatePerceptualHash(url)));
+      const hashByUrl = new Map<string, string>();
+
+      allHashResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          hashByUrl.set(allMemoryImageUrls[index], result.value);
+        }
+      });
+
+      const allMemoryHashes = Array.from(hashByUrl.values());
+
       // Hash photos for known people from tagged memories / summary mention
       for (const person of people) {
         const relatedImages = memories
           .filter(m => m.people.includes(person.name) || m.summary.toLowerCase().includes(person.name.toLowerCase()))
           .flatMap(m => m.image_urls);
 
-        const uniqueImages = [...new Set(relatedImages)].slice(0, 15);
-        if (uniqueImages.length === 0) {
-          next[person.id] = [];
-          continue;
-        }
-
-        const hashResults = await Promise.allSettled(uniqueImages.map(url => generatePerceptualHash(url)));
-        next[person.id] = hashResults
-          .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-          .map(result => result.value);
+        const relatedHashes = [...new Set(relatedImages.map((url) => hashByUrl.get(url)).filter(Boolean) as string[])];
+        next[person.id] = relatedHashes;
       }
 
       // Build recognisable people directly from memory tags/text (works even if People list is empty)
@@ -100,12 +104,7 @@ const CameraPage = () => {
         const memoryNames = getMemoryNames(memory);
         if (!memoryNames.length) continue;
 
-        const hashResults = await Promise.allSettled(
-          [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
-        );
-        const memoryHashes = hashResults
-          .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-          .map(result => result.value);
+        const memoryHashes = [...new Set(memory.image_urls.map((url) => hashByUrl.get(url)).filter(Boolean) as string[])].slice(0, 12);
 
         for (const rawName of memoryNames) {
           const trimmedName = rawName.trim();
@@ -126,6 +125,7 @@ const CameraPage = () => {
       if (active) {
         setMemoryHashesByPerson(next);
         setDerivedMemoryPeople(Array.from(derivedByName.values()));
+        setMemoryImageHashes(allMemoryHashes);
         setHashingMemoryPhotos(false);
       }
     };
