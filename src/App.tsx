@@ -40,6 +40,7 @@ const App = () => (
           <AnimatedBackground />
           <BrandMark />
           <ProfileSetupModal />
+          <TopHeader />
           <div className="relative z-10">
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>

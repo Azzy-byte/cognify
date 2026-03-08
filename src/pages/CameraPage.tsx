@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Camera, RotateCcw, User, Check, Trash2, X, Pencil } from 'lucide-react';
+import { Camera, RotateCcw, User, Check, Trash2, X } from 'lucide-react';
 import { generatePerceptualHash, findMatch, type MatchResult } from '@/lib/phash';
 
 const CameraPage = () => {
-  const { people, addPerson, updatePerson, deletePerson, addAuditEntry, currentUser } = useApp();
+  const { people, memories, addPerson, updatePerson, deletePerson, addAuditEntry, currentUser } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [streaming, setStreaming] = useState(false);
@@ -14,13 +14,13 @@ const CameraPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [relationship, setRelationship] = useState('');
+  const [customRelationship, setCustomRelationship] = useState('');
   const [tagged, setTagged] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
 
-  // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -29,6 +29,25 @@ const CameraPage = () => {
       }
     };
   }, []);
+
+  // Build an extended people list that includes photo hashes from memories
+  const getPeopleWithMemoryHashes = useCallback(() => {
+    return people.map(p => {
+      // Gather image URLs from memories that mention this person
+      const memoryImages: string[] = [];
+      memories.forEach(m => {
+        if (m.people.includes(p.name) || m.summary.toLowerCase().includes(p.name.toLowerCase())) {
+          memoryImages.push(...m.image_urls);
+        }
+      });
+      return {
+        ...p,
+        // photo_hashes already includes camera photos; memory images are matched by URL overlap
+        photo_hashes: [...(p.photo_hashes || [])],
+        _memoryImageUrls: memoryImages,
+      };
+    });
+  }, [people, memories]);
 
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
@@ -107,7 +126,8 @@ const CameraPage = () => {
     setAnalyzing(true);
     try {
       const hash = await generatePerceptualHash(dataUrl);
-      const result = findMatch(hash, people);
+      const extendedPeople = getPeopleWithMemoryHashes();
+      const result = findMatch(hash, extendedPeople);
       setMatchResult(result);
       if (!result.recognized) setShowForm(true);
     } catch {
@@ -115,7 +135,7 @@ const CameraPage = () => {
       setMatchResult({ recognized: false });
     }
     setAnalyzing(false);
-  }, [people, stopCamera]);
+  }, [people, stopCamera, getPeopleWithMemoryHashes]);
 
   const confirmMatch = async () => {
     if (!matchResult?.personId || !photo) return;
@@ -133,13 +153,27 @@ const CameraPage = () => {
 
   const denyMatch = () => { setMatchResult({ recognized: false }); setShowForm(true); };
 
+  const getRelationshipValue = () => {
+    if (relationship === 'Other' || relationship === '') return customRelationship.trim() || 'Unknown';
+    return relationship;
+  };
+
   const addNewPerson = async () => {
     if (!name.trim() || !photo) return;
     let hash = '';
     try { hash = await generatePerceptualHash(photo); } catch { /* empty */ }
     addPerson({
-      name: name.trim(), relationship: relationship.trim() || 'Unknown',
+      name: name.trim(), relationship: getRelationshipValue(),
       photo_urls: [photo], photo_hashes: hash ? [hash] : [], times_mentioned: 1,
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'person_added',
+      target_type: 'person',
+      target_id: '',
+      new_value: { name: name.trim(), relationship: getRelationshipValue() },
     });
     setTagged(name.trim());
     setTimeout(() => reset(), 2000);
@@ -153,7 +187,7 @@ const CameraPage = () => {
 
   const reset = () => {
     setPhoto(null); setMatchResult(null); setShowForm(false);
-    setName(''); setRelationship(''); setTagged(null); setAnalyzing(false); setError(null);
+    setName(''); setRelationship(''); setCustomRelationship(''); setTagged(null); setAnalyzing(false); setError(null);
   };
 
   return (
@@ -208,6 +242,14 @@ const CameraPage = () => {
                   <option value="Neighbor">Neighbor</option>
                   <option value="Other">Other</option>
                 </select>
+                {(relationship === 'Other' || relationship === '') && (
+                  <input
+                    value={customRelationship}
+                    onChange={(e) => setCustomRelationship(e.target.value)}
+                    placeholder="Type relationship (e.g. Cousin, Uncle)"
+                    className="input-glass w-full"
+                  />
+                )}
                 <button onClick={addNewPerson} className="btn-pink w-full min-h-[48px]">Save Person</button>
               </div>
             </GlassCard>
@@ -234,7 +276,7 @@ const CameraPage = () => {
             <button onClick={() => void startCamera()} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]"><Camera size={20} /> {error ? 'Try Again' : 'Open Camera'}</button>
           )}
 
-          {/* Known People with edit/delete */}
+          {/* Known People */}
           <GlassCard className="p-4">
             <h3 className="font-semibold mb-3">Known People ({people.length})</h3>
             {people.length === 0 ? (

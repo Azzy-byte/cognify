@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageCircle, BookOpen, Camera, Bell, Users, MapPin, User, AlertTriangle } from 'lucide-react';
+import { MessageCircle, BookOpen, Camera, Bell, Users, MapPin, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import SOSModal from './SOSModal';
 
@@ -10,7 +10,6 @@ const tabs = [
   { path: '/reminders', icon: Bell, label: 'Reminders' },
   { path: '/map', icon: MapPin, label: 'Map' },
   { path: '/family', icon: Users, label: 'Family' },
-  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 const Navigation = () => {
@@ -40,19 +39,19 @@ const Navigation = () => {
             );
           })}
 
-          {/* SOS Center Button */}
+          {/* SOS Center Button - subtle */}
           <button
             onClick={() => setSOSOpen(true)}
             className="relative flex flex-col items-center gap-0.5 -mt-6"
             aria-label="SOS Emergency"
           >
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-destructive to-soft-pink shadow-lg flex items-center justify-center sos-pulse active:scale-95 transition-transform border-4 border-card">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-destructive to-coral shadow-md flex items-center justify-center active:scale-95 transition-transform border-4 border-card">
               <AlertTriangle size={22} className="text-destructive-foreground" />
             </div>
             <span className="text-[9px] font-bold text-destructive">SOS</span>
           </button>
 
-          {tabs.slice(3, 6).map(({ path, icon: Icon, label }) => {
+          {tabs.slice(3).map(({ path, icon: Icon, label }) => {
             const active = location.pathname === path;
             return (
               <button
