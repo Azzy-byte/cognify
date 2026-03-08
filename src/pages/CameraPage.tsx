@@ -302,11 +302,13 @@ const CameraPage = () => {
       p.id === matchResult.personId || p.name.toLowerCase() === matchedName.toLowerCase()
     );
     const hash = await generatePerceptualHash(photo);
+    const visuallyLinkedMemoryHashes = getVisualNeighborHashes([hash], memoryImageHashes, 0.34);
+    const mergedHashes = [...new Set([hash, ...visuallyLinkedMemoryHashes])];
 
     if (person) {
       updatePerson(person.id, {
         photo_urls: [...person.photo_urls, photo],
-        photo_hashes: [...(person.photo_hashes || []), hash],
+        photo_hashes: [...new Set([...(person.photo_hashes || []), ...mergedHashes])],
         times_mentioned: person.times_mentioned + 1,
       });
       setTagged(person.name);
@@ -315,7 +317,7 @@ const CameraPage = () => {
         name: matchResult.name,
         relationship: matchResult.relationship || 'From memories',
         photo_urls: [photo],
-        photo_hashes: [hash],
+        photo_hashes: mergedHashes,
         times_mentioned: 1,
       });
       setTagged(matchResult.name);
