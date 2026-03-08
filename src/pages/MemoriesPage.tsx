@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, X, Pencil, Trash2, Plus, BookOpen } from 'lucide-react';
+import { Search, X, Pencil, Trash2, Plus, BookOpen, Volume2 } from 'lucide-react';
 import type { Memory } from '@/types';
 
 const categories = ['All', 'Family', 'Social', 'Health', 'General'] as const;
@@ -60,6 +60,17 @@ const MemoryCard = ({ memory, onClick, index }: { memory: Memory; onClick: () =>
           {memory.audio_url && (
             <div className="bg-soft-pink/10 rounded-2xl p-3">
               <audio src={memory.audio_url} controls className="w-full h-8" />
+            </div>
+          )}
+
+          {memory.audio_urls && memory.audio_urls.length > 0 && (
+            <div className="space-y-2">
+              {memory.audio_urls.map((url, j) => (
+                <div key={j} className="flex items-center gap-2 bg-lavender/10 rounded-2xl p-2">
+                  <Volume2 size={14} className="text-lavender shrink-0" />
+                  <audio src={url} controls className="w-full h-8" />
+                </div>
+              ))}
             </div>
           )}
 
@@ -281,6 +292,29 @@ const MemoriesPage = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {selectedMemory.conversation.filter(m => m.role === 'user').map(m => m.text).join('. ')}.
                 </p>
+              </div>
+            )}
+
+            {/* Audio recordings in detail modal */}
+            {selectedMemory.audio_urls && selectedMemory.audio_urls.length > 0 && (
+              <div className="mb-4 space-y-2">
+                <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  <Volume2 size={14} /> Audio Recordings
+                </p>
+                {selectedMemory.audio_urls.map((url, j) => (
+                  <div key={j} className="bg-lavender/10 rounded-xl p-3">
+                    <audio src={url} controls className="w-full h-8" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedMemory.audio_url && !selectedMemory.audio_urls?.length && (
+              <div className="mb-4 bg-lavender/10 rounded-xl p-3">
+                <p className="text-sm font-medium text-foreground flex items-center gap-1.5 mb-2">
+                  <Volume2 size={14} /> Audio Recording
+                </p>
+                <audio src={selectedMemory.audio_url} controls className="w-full h-8" />
               </div>
             )}
 

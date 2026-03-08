@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/store/AppContext";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import Navigation from "@/components/Navigation";
-import SOSButton from "@/components/SOSButton";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BrandMark from '@/components/BrandMark';
 import ProfileSetupModal from '@/components/ProfileSetupModal';
@@ -57,7 +56,6 @@ const App = () => (
               </Suspense>
             </ErrorBoundary>
           </div>
-          <SOSButton />
           <Navigation />
         </BrowserRouter>
       </AppProvider>

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { Plus, Pill, Clock, Trash2, Check, Bell, X, Calendar, Pencil, AlertTriangle, ShieldAlert, Package } from 'lucide-react';
+import { toast } from 'sonner';
 import { checkInteractions, checkDuplicates, checkDoseChange, type InteractionAlert, type DuplicateAlert } from '@/lib/medicationInteractions';
 
 const InteractionWarning = ({
@@ -130,7 +131,26 @@ const DoseChangeWarning = ({
 );
 
 const MedicationsPage = () => {
-  const { medications, reminders, currentUser, addMedication, updateMedication, deleteMedication, addReminder, updateReminder, deleteReminder, addAuditEntry, canEdit } = useApp();
+  const { medications, reminders, contacts, currentUser, addMedication, updateMedication, deleteMedication, addReminder, updateReminder, deleteReminder, addAuditEntry, canEdit } = useApp();
+
+  const notifyCaretaker = useCallback((action: string, medName: string, details?: string) => {
+    const emergencyContacts = contacts.filter(c => c.is_emergency);
+    if (emergencyContacts.length === 0) return;
+    const names = emergencyContacts.map(c => c.name).join(', ');
+    toast.warning(`⚠️ Caretaker Alert Sent`, {
+      description: `${action}: ${medName}${details ? ` — ${details}` : ''}. Notified: ${names}`,
+      duration: 5000,
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'caretaker_notified',
+      target_type: 'medication',
+      target_id: '',
+      new_value: { action, medication: medName, details, contacts_notified: emergencyContacts.map(c => c.name) },
+    });
+  }, [contacts, currentUser, addAuditEntry]);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'medication' | 'routine'>('medication');
   const [name, setName] = useState('');
@@ -219,6 +239,7 @@ const MedicationsPage = () => {
       action_type: 'medication_added', target_type: 'medication', target_id: '',
       new_value: { name, dosage, times, supply: qty },
     });
+    notifyCaretaker('New medication added', name.trim(), `${dosage.trim()}, ${frequency}`);
     setName(''); setDosage(''); setTimes(['08:00']); setPrescriber(''); setSupplyQty('');
     setShowForm(false);
   };
@@ -258,6 +279,11 @@ const MedicationsPage = () => {
 
   const commitEditMed = () => {
     if (!editingMed) return;
+    const original = medications.find(m => m.id === editingMed);
+    const changes: string[] = [];
+    if (original && original.name !== editMedName.trim()) changes.push(`name: ${original.name} → ${editMedName.trim()}`);
+    if (original && original.dosage !== editMedDosage.trim()) changes.push(`dosage: ${original.dosage} → ${editMedDosage.trim()}`);
+
     updateMedication(editingMed, {
       name: editMedName.trim(),
       dosage: editMedDosage.trim(),
@@ -269,6 +295,9 @@ const MedicationsPage = () => {
       action_type: 'medication_updated', target_type: 'medication', target_id: editingMed,
       new_value: { name: editMedName, dosage: editMedDosage },
     });
+    if (changes.length > 0) {
+      notifyCaretaker('Medication changed', editMedName.trim(), changes.join(', '));
+    }
     setEditingMed(null);
     setDoseWarning(null);
     setPendingAlerts(null);
@@ -290,6 +319,13 @@ const MedicationsPage = () => {
   const handleDelete = (med: typeof medications[0]) => {
     if (!canEdit(med.created_by)) { alert("You can only delete medications you created"); return; }
     if (confirmDelete !== med.id) { setConfirmDelete(med.id); return; }
+    notifyCaretaker('Medication deleted', med.name, `${med.dosage}, ${med.frequency}`);
+    addAuditEntry({
+      timestamp: new Date().toISOString(), actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'medication_deleted', target_type: 'medication', target_id: med.id,
+      old_value: { name: med.name, dosage: med.dosage },
+    });
     deleteMedication(med.id);
     setConfirmDelete(null);
   };

@@ -1,8 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import BrainCharacter from '@/components/BrainCharacter';
 import { Send, Mic, ImagePlus, Save, X, Play, Square } from 'lucide-react';
+import { generateSmartResponse } from '@/lib/chatAssistant';
 import type { ChatMessage } from '@/types';
 
 interface AudioRecording {
@@ -27,7 +29,14 @@ const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
             : 'glass-card rounded-3xl rounded-bl-lg'
         }`}
       >
-        <p className="text-foreground leading-relaxed">{msg.text}</p>
+        <div className="text-foreground leading-relaxed whitespace-pre-wrap">
+          {msg.text.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={i}>{part.slice(2, -2)}</strong>;
+            }
+            return part;
+          })}
+        </div>
         {msg.image_urls && msg.image_urls.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-2">
             {msg.image_urls.map((url, j) => (
@@ -47,18 +56,35 @@ const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
   );
 };
 
+const TypingIndicator = () => (
+  <div className="flex justify-start">
+    <div className="glass-card rounded-3xl rounded-bl-lg px-5 py-3 flex gap-1.5">
+      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+      <div className="w-2 h-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+    </div>
+  </div>
+);
+
 const ChatPage = () => {
-  const { currentUser, people, addMemory, addAuditEntry } = useApp();
+  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addAuditEntry } = useApp();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [audioRecordings, setAudioRecordings] = useState<AudioRecording[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, typing]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() && images.length === 0 && audioRecordings.length === 0) return;
@@ -69,23 +95,38 @@ const ChatPage = () => {
       image_urls: images.length > 0 ? [...images] : undefined,
     };
     const newMessages = [...messages, userMsg];
-
-    const mentionedPeople = people.filter(p => input.toLowerCase().includes(p.name.toLowerCase()));
-    let response = "Thank you for sharing! ";
-    if (mentionedPeople.length > 0) {
-      response += `I notice you mentioned ${mentionedPeople.map(p => `${p.name} (${p.relationship})`).join(', ')}. `;
-    }
-    if (audioRecordings.length > 0) {
-      response += `I received your ${audioRecordings.length} audio recording(s). `;
-    }
-    response += "Tell me more about your day!";
-
-    const assistantMsg: ChatMessage = { role: 'assistant', text: response };
-    setMessages([...newMessages, assistantMsg]);
+    setMessages(newMessages);
     setInput('');
     setImages([]);
+
+    // Show typing indicator
+    setTyping(true);
+
+    // Generate smart response with a slight delay for natural feel
+    setTimeout(() => {
+      const appData = {
+        currentUser, memories, people, medications, reminders, contacts, safeZones,
+      };
+      const response = generateSmartResponse(
+        input,
+        appData,
+        newMessages.map(m => ({ role: m.role, text: m.text }))
+      );
+
+      const assistantMsg: ChatMessage = { role: 'assistant', text: response.text };
+      setMessages([...newMessages, assistantMsg]);
+      setTyping(false);
+
+      // Handle navigation actions
+      if (response.action?.type === 'navigate' && response.action.payload?.path) {
+        setTimeout(() => {
+          navigate(response.action!.payload!.path as string);
+        }, 1500);
+      }
+    }, 600 + Math.random() * 400);
+
     setAudioRecordings([]);
-  }, [input, images, messages, people, audioRecordings]);
+  }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate]);
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -161,11 +202,13 @@ const ChatPage = () => {
     );
     const summary = messages.filter(m => m.role === 'user').map(m => m.text).join('. ').slice(0, 200);
     const allImages = messages.flatMap(m => m.image_urls || []).concat(images);
+    const allAudioUrls = audioRecordings.map(r => r.url);
 
     addMemory({
       conversation: messages,
       summary,
       image_urls: allImages,
+      audio_urls: allAudioUrls.length > 0 ? allAudioUrls : undefined,
       people: allPeople.map(p => p.name),
       category: 'general',
       created_by: currentUser.id,
@@ -183,15 +226,45 @@ const ChatPage = () => {
     setTimeout(() => { setMessages([]); setSaved(false); }, 1500);
   };
 
+  const quickActions = [
+    { label: '💊 My Meds', prompt: 'What are my medications?' },
+    { label: '🧠 Memories', prompt: 'Show my recent memories' },
+    { label: '👥 People', prompt: 'Who are the people I know?' },
+    { label: '❓ Help', prompt: 'What can you do?' },
+  ];
+
+  const handleQuickAction = (prompt: string) => {
+    setInput(prompt);
+    setTimeout(() => {
+      const el = document.querySelector('[data-send-btn]') as HTMLButtonElement;
+      el?.click();
+    }, 50);
+  };
+
   return (
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
       <div className="space-y-3 mb-4">
         {messages.length === 0 && (
-          <BrainCharacter userName={currentUser.name} />
+          <>
+            <BrainCharacter userName={currentUser.name} />
+            <div className="flex flex-wrap gap-2 justify-center px-4">
+              {quickActions.map(a => (
+                <button
+                  key={a.label}
+                  onClick={() => handleQuickAction(a.prompt)}
+                  className="pill-badge hover:bg-soft-pink/30 transition-colors cursor-pointer active:scale-95 text-sm"
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
         {messages.map((msg, i) => (
           <ChatBubble key={i} msg={msg} index={i} />
         ))}
+        {typing && <TypingIndicator />}
+        <div ref={scrollRef} />
       </div>
 
       {messages.length >= 2 && (
@@ -248,10 +321,10 @@ const ChatPage = () => {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder="Type a message..."
+          placeholder="Ask me anything..."
           className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground min-h-[48px]"
         />
-        <button onClick={handleSend} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95" aria-label="Send message">
+        <button data-send-btn onClick={handleSend} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95" aria-label="Send message">
           <Send size={20} className="text-soft-pink" />
         </button>
       </GlassCard>
