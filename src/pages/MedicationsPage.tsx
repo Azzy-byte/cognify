@@ -375,7 +375,7 @@ const MedicationsPage = () => {
   const handleDelete = (med: typeof medications[0]) => {
     if (!canEdit(med.created_by)) { alert("You can only delete medications you created"); return; }
     if (confirmDelete !== med.id) { setConfirmDelete(med.id); return; }
-    notifyCaretaker('Medication deleted', med.name, `${med.dosage}, ${med.frequency}`);
+    notifyCaretaker('Medication deleted', med.name, `${med.dosage}, ${med.frequency}`, med.id);
     addAuditEntry({
       timestamp: new Date().toISOString(), actor_id: currentUser.id,
       actor_name: `${currentUser.name} (${currentUser.role})`,
