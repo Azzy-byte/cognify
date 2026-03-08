@@ -4,10 +4,10 @@ import { Hospital, HelpCircle, ShieldAlert, Phone, CheckCircle } from 'lucide-re
 import { useState } from 'react';
 
 const emergencyTypes = [
-  { type: 'medical' as const, icon: Hospital, label: 'Medical', color: 'text-destructive', emoji: '🏥' },
-  { type: 'lost' as const, icon: HelpCircle, label: 'Lost', color: 'text-sky-blue', emoji: '🤔' },
-  { type: 'safety' as const, icon: ShieldAlert, label: 'Safety', color: 'text-lavender', emoji: '⚠️' },
-  { type: 'help' as const, icon: Phone, label: 'Help', color: 'text-mint', emoji: '📞' },
+  { type: 'medical' as const, icon: Hospital, label: 'Medical', color: 'text-destructive' },
+  { type: 'lost' as const, icon: HelpCircle, label: 'Lost', color: 'text-sky-blue' },
+  { type: 'safety' as const, icon: ShieldAlert, label: 'Safety', color: 'text-lavender' },
+  { type: 'help' as const, icon: Phone, label: 'Help', color: 'text-mint' },
 ];
 
 interface SOSModalProps {
@@ -24,10 +24,8 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
         addSOSEvent({
-          user_id: currentUser.id,
-          type,
-          location_lat: pos.coords.latitude,
-          location_lng: pos.coords.longitude,
+          user_id: currentUser.id, type,
+          location_lat: pos.coords.latitude, location_lng: pos.coords.longitude,
           contacts_notified: emergencyContacts.map(c => c.name),
           timestamp: new Date().toISOString(),
         });
@@ -36,8 +34,7 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
           actor_id: currentUser.id,
           actor_name: `${currentUser.name} (${currentUser.role})`,
           action_type: 'sos_triggered',
-          target_type: 'sos',
-          target_id: '',
+          target_type: 'sos', target_id: '',
           new_value: { type, contacts: emergencyContacts.map(c => c.name) },
         });
         setSent(true);
@@ -69,17 +66,16 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
             <p className="text-muted-foreground">Notified {emergencyContacts.length} emergency contact{emergencyContacts.length !== 1 ? 's' : ''}</p>
           </GlassCard>
         ) : (
-          <GlassCard className="p-6">
-            <h2 className="text-xl font-bold text-center mb-6">🚨 SOS Emergency</h2>
+          <GlassCard className="p-6" style={{ borderRadius: 'var(--radius-lg)' }}>
+            <h2 className="text-xl font-bold text-center mb-6">SOS Emergency</h2>
             <div className="grid grid-cols-2 gap-4">
-              {emergencyTypes.map(({ type, icon: Icon, label, emoji }) => (
+              {emergencyTypes.map(({ type, icon: Icon, label }) => (
                 <button
                   key={type}
                   onClick={() => handleSOS(type)}
-                  className="glass-card-hover p-6 flex flex-col items-center gap-3 hover:scale-105 active:scale-95 transition-all duration-200"
+                  className="glass-card-hover p-6 flex flex-col items-center gap-3 active:scale-95 transition-transform duration-200 min-h-[120px]"
                 >
-                  <span className="text-3xl">{emoji}</span>
-                  <Icon size={24} />
+                  <Icon size={32} />
                   <span className="font-semibold">{label}</span>
                 </button>
               ))}

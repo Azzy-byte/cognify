@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { MapPin, Plus, Trash2, Shield, Navigation as NavIcon } from 'lucide-react';
+import { Trash2, Shield, Navigation as NavIcon } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle, Polyline, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -26,19 +25,26 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const MapPage = () => {
   const { locations, safeZones, currentUser, addLocation, addSafeZone, updateSafeZone, deleteSafeZone, addAuditEntry } = useApp();
   const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number }>({ lat: 40.7128, lng: -74.006 });
   const [tracking, setTracking] = useState(false);
   const [editingZone, setEditingZone] = useState<string | null>(null);
   const [zoneName, setZoneName] = useState('');
-  const [zoneRadius, setZoneRadius] = useState(500);
   const watchRef = useRef<number | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       pos => setCurrentPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {} // Keep default NYC
+      () => {}
     );
   }, []);
 
@@ -52,19 +58,12 @@ const MapPage = () => {
           user_id: currentUser.id, lat: loc.lat, lng: loc.lng,
           accuracy: pos.coords.accuracy, timestamp: new Date().toISOString(),
         });
-
-        // Check safe zones
         const hour = new Date().getHours();
         const isNight = hour >= 20 || hour < 6;
         if (isNight) {
-          const inZone = safeZones.some(z => {
-            const dist = getDistance(loc.lat, loc.lng, z.lat, z.lng);
-            return dist <= z.radius_meters;
-          });
+          const inZone = safeZones.some(z => getDistance(loc.lat, loc.lng, z.lat, z.lng) <= z.radius_meters);
           if (!inZone && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('🤔 Are you lost?', {
-              body: "You're outside your safe zones at night. Tap for help.",
-            });
+            new Notification('Are you lost?', { body: "You're outside your safe zones at night. Tap for help." });
           }
         }
       },
@@ -101,7 +100,7 @@ const MapPage = () => {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
-      <h1 className="text-2xl font-bold mb-4">📍 Location & Safe Zones</h1>
+      <h1 className="text-2xl font-bold mb-4">Location & Safe Zones</h1>
 
       {currentPos && (
         <GlassCard className="overflow-hidden mb-4" style={{ height: 350 }}>
@@ -112,12 +111,12 @@ const MapPage = () => {
             />
             <RecenterMap lat={currentPos.lat} lng={currentPos.lng} />
             <Marker position={[currentPos.lat, currentPos.lng]} icon={blueIcon}>
-              <Popup>📍 Current Location</Popup>
+              <Popup>Current Location</Popup>
             </Marker>
             {safeZones.map(z => (
               <Circle key={z.id} center={[z.lat, z.lng]} radius={z.radius_meters}
                 pathOptions={{ color: '#B8F5D8', fillColor: '#B8F5D8', fillOpacity: 0.2 }}>
-                <Popup>🛡️ {z.name}</Popup>
+                <Popup>{z.name}</Popup>
               </Circle>
             ))}
             {recentLocations.length > 1 && (
@@ -128,11 +127,13 @@ const MapPage = () => {
       )}
 
       <div className="flex gap-2 mb-4">
-        <button onClick={addCurrentAsSafe} className="btn-primary flex-1 flex items-center justify-center gap-2">
+        <button onClick={addCurrentAsSafe} className="btn-primary flex-1 flex items-center justify-center gap-2 min-h-[48px]">
           <Shield size={18} /> Set Current Area as Safe
         </button>
         <button onClick={tracking ? stopTracking : startTracking}
-          className={`rounded-full min-h-[48px] px-4 font-semibold transition-all ${tracking ? 'bg-destructive/20 text-destructive' : 'bg-mint/20 text-mint'}`}>
+          className={`rounded-full min-h-[48px] min-w-[48px] px-4 font-semibold transition-colors duration-200 flex items-center justify-center ${tracking ? 'bg-destructive/20 text-destructive' : 'bg-mint/20 text-mint'}`}
+          aria-label={tracking ? 'Stop tracking' : 'Start tracking'}
+        >
           <NavIcon size={18} />
         </button>
       </div>
@@ -156,19 +157,19 @@ const MapPage = () => {
                     className="input-glass text-sm py-1 px-2" autoFocus />
                 ) : (
                   <p className="font-medium cursor-pointer" onClick={() => { setEditingZone(z.id); setZoneName(z.name); }}>
-                    🛡️ {z.name}
+                    {z.name}
                   </p>
                 )}
                 <p className="text-sm text-muted-foreground">{z.radius_meters}m radius</p>
               </div>
-              <button onClick={() => deleteSafeZone(z.id)} className="p-2 text-destructive/60 hover:text-destructive">
+              <button onClick={() => deleteSafeZone(z.id)} className="p-2 text-destructive/60 hover:text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Delete safe zone">
                 <Trash2 size={16} />
               </button>
             </div>
             <div className="mt-2">
               <input type="range" min={100} max={5000} step={100} value={z.radius_meters}
                 onChange={e => updateSafeZone(z.id, { radius_meters: parseInt(e.target.value) })}
-                className="w-full accent-mint" />
+                className="w-full accent-mint" aria-label="Adjust radius" />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>100m</span><span>5000m</span>
               </div>
@@ -179,13 +180,5 @@ const MapPage = () => {
     </div>
   );
 };
-
-function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 export default MapPage;
