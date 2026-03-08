@@ -224,9 +224,12 @@ const CameraPage = () => {
       // Fallback: if memory indexing is still cold, compute directly from memories now
       const hasAnyHashes = extendedPeople.some(p => (p.photo_hashes?.length || 0) > 0);
       if (!hasAnyHashes && memories.length > 0) {
-        const derivedByName = new Map<string, { id: string; name: string; relationship: string; photo_hashes: string[] }>();
+        const derivedByName = new Map<string, DerivedMemoryPerson>();
         for (const memory of memories) {
-          if (!memory.image_urls.length || !memory.people.length) continue;
+          if (!memory.image_urls.length) continue;
+          const memoryNames = getMemoryNames(memory);
+          if (!memoryNames.length) continue;
+
           const hashResults = await Promise.allSettled(
             [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
           );
@@ -234,7 +237,7 @@ const CameraPage = () => {
             .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
             .map(result => result.value);
 
-          for (const rawName of memory.people) {
+          for (const rawName of memoryNames) {
             const trimmedName = rawName.trim();
             if (!trimmedName) continue;
             const key = trimmedName.toLowerCase();
