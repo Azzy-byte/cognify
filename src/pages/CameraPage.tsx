@@ -57,6 +57,7 @@ const CameraPage = () => {
   const [memoryHashesByPerson, setMemoryHashesByPerson] = useState<Record<string, string[]>>({});
   const [derivedMemoryPeople, setDerivedMemoryPeople] = useState<DerivedMemoryPerson[]>([]);
   const [hashingMemoryPhotos, setHashingMemoryPhotos] = useState(false);
+  const [memoryImageHashes, setMemoryImageHashes] = useState<string[]>([]);
 
   useEffect(() => {
     return () => {
