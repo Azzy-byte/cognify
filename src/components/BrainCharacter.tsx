@@ -107,13 +107,13 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
           {/* Right leg */}
           <rect x="114" y="132" width="8" height="22" rx="4" fill="hsl(340 45% 62%)" />
           {/* Left foot */}
-          <ellipse cx="80" cy="155" rx="8" ry="5" fill="hsl(12 50% 58%)" />
+          <ellipse cx="80" cy="155" rx="8" ry="5" fill="hsl(340 45% 58%)" />
           {/* Right foot */}
-          <ellipse cx="120" cy="155" rx="8" ry="5" fill="hsl(12 50% 58%)" />
+          <ellipse cx="120" cy="155" rx="8" ry="5" fill="hsl(340 45% 58%)" />
 
           {/* === RIGHT ARM raised with lightbulb === */}
           {/* Arm */}
-          <path d="M156 95 C162 88, 166 74, 160 60" stroke="hsl(12 50% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
+          <path d="M156 95 C162 88, 166 74, 160 60" stroke="hsl(340 45% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
           {/* Hand / pointer finger */}
           <circle cx="160" cy="58" r="4" fill="hsl(12 50% 62%)" />
 
