@@ -201,16 +201,30 @@ const CameraPage = () => {
   }, [people, stopCamera, getPeopleWithMemoryHashes]);
 
   const confirmMatch = async () => {
-    if (!matchResult?.personId || !photo) return;
-    const person = people.find((p) => p.id === matchResult.personId);
-    if (!person) return;
+    if (!matchResult?.name || !photo) return;
+    const person = people.find((p) =>
+      p.id === matchResult.personId || p.name.toLowerCase() === matchResult.name!.toLowerCase()
+    );
     const hash = await generatePerceptualHash(photo);
-    updatePerson(person.id, {
-      photo_urls: [...person.photo_urls, photo],
-      photo_hashes: [...(person.photo_hashes || []), hash],
-      times_mentioned: person.times_mentioned + 1,
-    });
-    setTagged(person.name);
+
+    if (person) {
+      updatePerson(person.id, {
+        photo_urls: [...person.photo_urls, photo],
+        photo_hashes: [...(person.photo_hashes || []), hash],
+        times_mentioned: person.times_mentioned + 1,
+      });
+      setTagged(person.name);
+    } else {
+      addPerson({
+        name: matchResult.name,
+        relationship: matchResult.relationship || 'From memories',
+        photo_urls: [photo],
+        photo_hashes: [hash],
+        times_mentioned: 1,
+      });
+      setTagged(matchResult.name);
+    }
+
     setTimeout(() => reset(), 2000);
   };
 
