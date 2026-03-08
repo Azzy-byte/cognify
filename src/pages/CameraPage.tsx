@@ -312,6 +312,9 @@ const CameraPage = () => {
           {/* Known People */}
           <GlassCard className="p-4">
             <h3 className="font-semibold mb-3">Known People ({people.length})</h3>
+            {hashingMemoryPhotos && (
+              <p className="text-xs text-muted-foreground mb-2">Indexing memory photos for recognition…</p>
+            )}
             {people.length === 0 ? (
               <p className="text-muted-foreground text-sm">No people added yet. Capture a photo to add someone.</p>
             ) : (
