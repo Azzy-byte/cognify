@@ -87,18 +87,35 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
   };
 
   const getHomeDirections = () => {
-    if (!currentPos || currentPos.lat === 0) {
-      toast.info('Location not available. Please enable GPS.');
-      return;
-    }
     const homeZone = safeZones.find(z => z.name.toLowerCase().includes('home')) || safeZones[0];
     if (!homeZone) {
       toast.info('No home location set. Add a safe zone on the Map page.');
       return;
     }
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&origin=${currentPos.lat},${currentPos.lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`,
-      '_blank'
+
+    const openDirections = (lat: number, lng: number) => {
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`,
+        '_blank'
+      );
+    };
+
+    if (currentPos && currentPos.lat !== 0) {
+      openDirections(currentPos.lat, currentPos.lng);
+      return;
+    }
+
+    // Try to get fresh location
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCurrentPos(loc);
+        openDirections(loc.lat, loc.lng);
+      },
+      () => {
+        toast.info('Location not available. Please enable GPS.');
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
     );
   };
 
