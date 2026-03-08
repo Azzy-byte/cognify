@@ -70,7 +70,7 @@ export function findMatch(
   people: Array<{ id: string; name: string; relationship: string; photo_hashes?: string[] }>
 ): MatchResult {
   // More lenient threshold for perceptual matching (out of 64 bits)
-  const threshold = 22;
+  const threshold = 30;
   let bestMatch: MatchResult = { recognized: false };
   let bestDistance = Infinity;
 
