@@ -80,7 +80,7 @@ export function findMatch(
   newHash: string,
   people: Array<{ id: string; name: string; relationship: string; photo_hashes?: string[] }>
 ): MatchResult {
-  const threshold = 10;
+  const threshold = 18;
   let bestMatch: MatchResult = { recognized: false };
   let bestDistance = Infinity;
 
