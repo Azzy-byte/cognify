@@ -138,8 +138,8 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
           </g>
 
           {/* === LEFT ARM (resting) === */}
-          <path d="M44 100 C36 108, 34 118, 38 124" stroke="hsl(12 50% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
-          <circle cx="38" cy="126" r="4" fill="hsl(12 50% 62%)" />
+          <path d="M44 100 C36 108, 34 118, 38 124" stroke="hsl(340 45% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
+          <circle cx="38" cy="126" r="4" fill="hsl(340 45% 62%)" />
 
         </svg>
       </div>
