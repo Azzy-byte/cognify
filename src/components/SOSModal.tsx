@@ -75,7 +75,7 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
     emergencyContacts.forEach(contact => {
       toast.error(`SOS Alert sent to ${contact.name}!`, {
         description: `${currentUser.name} triggered a ${type} emergency${loc.lat !== 0 ? ` at location (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})` : ''}.`,
-        duration: 8000,
+        duration: 3000,
       });
     });
 
