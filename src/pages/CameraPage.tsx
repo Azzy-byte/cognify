@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Camera, RotateCcw, User, Check, X } from 'lucide-react';
+import { Camera, RotateCcw, User, Check } from 'lucide-react';
 import { generatePerceptualHash, findMatch, type MatchResult } from '@/lib/phash';
 
 const CameraPage = () => {
@@ -19,27 +19,63 @@ const CameraPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
-  const startCamera = useCallback(async (facing?: 'user' | 'environment') => {
-    // Stop any existing stream first
+  const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
 
-    const mode = facing || facingMode;
+    const mode = nextFacing || facingMode;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setStreaming(true);
-        setFacingMode(mode);
-        setError(null);
+
+      const video = videoRef.current;
+      if (!video) return;
+
+      video.srcObject = stream;
+      video.playsInline = true;
+      video.muted = true;
+
+      const playVideo = async () => {
+        try {
+          await video.play();
+          streamRef.current = stream;
+          setStreaming(true);
+          setFacingMode(mode);
+          setError(null);
+        } catch {
+          setError('Camera started but video preview failed. Tap Open Camera again.');
+        }
+      };
+
+      if (video.readyState >= 2) {
+        await playVideo();
+      } else {
+        video.onloadedmetadata = () => {
+          void playVideo();
+        };
       }
     } catch (err) {
+      // Fallback for devices that do not support requested facingMode
+      if (nextFacing) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const video = videoRef.current;
+          if (!video) return;
+          video.srcObject = stream;
+          await video.play();
+          streamRef.current = stream;
+          setStreaming(true);
+          setError(null);
+          return;
+        } catch {
+          // continue to normal error handling
+        }
+      }
+
       if (err instanceof Error && err.name === 'NotAllowedError') {
         setError('Camera access denied. Please allow camera permissions in your browser settings and try again.');
       } else {
@@ -50,19 +86,26 @@ const CameraPage = () => {
 
   const flipCamera = useCallback(() => {
     const newMode = facingMode === 'user' ? 'environment' : 'user';
-    startCamera(newMode);
+    void startCamera(newMode);
   }, [facingMode, startCamera]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setStreaming(false);
   }, []);
 
   const capture = useCallback(async () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+      setError('Camera preview is not ready yet. Please wait a second and try again.');
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
@@ -88,7 +131,7 @@ const CameraPage = () => {
 
   const confirmMatch = async () => {
     if (!matchResult?.personId || !photo) return;
-    const person = people.find(p => p.id === matchResult.personId);
+    const person = people.find((p) => p.id === matchResult.personId);
     if (!person) return;
 
     const hash = await generatePerceptualHash(photo);
@@ -97,15 +140,17 @@ const CameraPage = () => {
       photo_hashes: [...(person.photo_hashes || []), hash],
       times_mentioned: person.times_mentioned + 1,
     });
+
     addAuditEntry({
       timestamp: new Date().toISOString(),
       actor_id: currentUser.id,
-      actor_name: `${currentUser.name} (${currentUser.role})`,
+      actor_name: `${currentUser.name || 'User'} (${currentUser.role})`,
       action_type: 'person_tagged',
       target_type: 'person',
       target_id: person.id,
       new_value: { name: person.name, photo_added: true },
     });
+
     setTagged(person.name);
     setTimeout(() => reset(), 2000);
   };
@@ -117,8 +162,13 @@ const CameraPage = () => {
 
   const addNewPerson = async () => {
     if (!name.trim() || !photo) return;
+
     let hash = '';
-    try { hash = await generatePerceptualHash(photo); } catch { /* fallback */ }
+    try {
+      hash = await generatePerceptualHash(photo);
+    } catch {
+      // keep empty hash fallback
+    }
 
     addPerson({
       name: name.trim(),
@@ -127,16 +177,18 @@ const CameraPage = () => {
       photo_hashes: hash ? [hash] : [],
       times_mentioned: 1,
     });
+
     addAuditEntry({
       timestamp: new Date().toISOString(),
       actor_id: currentUser.id,
-      actor_name: `${currentUser.name} (${currentUser.role})`,
+      actor_name: `${currentUser.name || 'User'} (${currentUser.role})`,
       action_type: 'person_added',
       target_type: 'person',
       target_id: '',
-      new_value: { name, relationship },
+      new_value: { name: name.trim(), relationship: relationship.trim() || 'Unknown' },
     });
-    setTagged(name);
+
+    setTagged(name.trim());
     setTimeout(() => reset(), 2000);
   };
 
@@ -185,9 +237,7 @@ const CameraPage = () => {
               <h3 className="font-semibold mb-3">
                 This is {matchResult.name} ({matchResult.relationship})
               </h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Confidence: {matchResult.confidence}%
-              </p>
+              <p className="text-sm text-muted-foreground mb-4">Confidence: {matchResult.confidence}%</p>
               <div className="flex gap-2">
                 <button onClick={confirmMatch} className="btn-primary flex-1 min-h-[48px]">Correct</button>
                 <button onClick={denyMatch} className="btn-pink flex-1 min-h-[48px]">Not them</button>
@@ -197,10 +247,10 @@ const CameraPage = () => {
 
           {showForm && (
             <GlassCard className="p-4 animate-fade-in">
-              <h3 className="font-semibold mb-3">I don't recognize this person yet</h3>
+              <h3 className="font-semibold mb-3">I don&apos;t recognize this person yet</h3>
               <div className="space-y-3">
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" className="input-glass w-full" />
-                <select value={relationship} onChange={e => setRelationship(e.target.value)} className="input-glass w-full">
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="input-glass w-full" />
+                <select value={relationship} onChange={(e) => setRelationship(e.target.value)} className="input-glass w-full">
                   <option value="">Select relationship</option>
                   <option value="Daughter">Daughter</option>
                   <option value="Son">Son</option>
@@ -221,7 +271,14 @@ const CameraPage = () => {
         <div className="space-y-4">
           <GlassCard className="overflow-hidden aspect-[4/3] flex items-center justify-center bg-foreground/5">
             {streaming ? (
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ borderRadius: 'var(--radius-md)' }} />
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover bg-muted"
+                style={{ borderRadius: 'var(--radius-md)' }}
+              />
             ) : (
               <div className="text-center p-8">
                 <Camera size={48} className="text-muted-foreground mx-auto mb-4" />
@@ -239,21 +296,21 @@ const CameraPage = () => {
               <button onClick={capture} className="btn-pink flex-1 flex items-center justify-center gap-2 min-h-[48px]">
                 <Camera size={20} /> Capture Photo
               </button>
-              <button onClick={flipCamera} className="btn-primary flex items-center justify-center gap-2 min-h-[48px] px-4">
-                <RotateCcw size={20} /> Flip
+              <button onClick={flipCamera} className="btn-primary min-h-[48px] flex items-center justify-center gap-2 px-4">
+                <RotateCcw size={18} /> Flip
               </button>
             </div>
           ) : (
-            <button onClick={() => startCamera()} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]">
+            <button onClick={() => void startCamera()} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]">
               <Camera size={20} /> {error ? 'Try Again' : 'Open Camera'}
             </button>
           )}
 
-          {people.length > 0 && (
+          {people.length > 0 ? (
             <GlassCard className="p-4">
               <h3 className="font-semibold mb-3">Known People ({people.length})</h3>
               <div className="space-y-2">
-                {people.map(p => (
+                {people.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 p-2">
                     <div className="w-10 h-10 rounded-full bg-soft-pink/20 flex items-center justify-center overflow-hidden">
                       {p.photo_urls.length > 0 ? (
@@ -269,6 +326,10 @@ const CameraPage = () => {
                   </div>
                 ))}
               </div>
+            </GlassCard>
+          ) : (
+            <GlassCard className="p-4 text-center">
+              <p className="text-muted-foreground text-sm">No people added yet. Capture a photo and save a person to train recognition.</p>
             </GlassCard>
           )}
         </div>
