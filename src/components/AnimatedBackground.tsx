@@ -1,9 +1,9 @@
 const AnimatedBackground = () => (
-  <div className="fixed inset-0 -z-10 overflow-hidden gradient-bg">
-    <div className="orb orb-1" />
-    <div className="orb orb-2" />
-    <div className="orb orb-3" />
-    <div className="orb orb-4" />
+  <div className="fixed inset-0 overflow-hidden gradient-bg" style={{ zIndex: -1 }}>
+    <div className="orb orb-1" aria-hidden="true" />
+    <div className="orb orb-2" aria-hidden="true" />
+    <div className="orb orb-3" aria-hidden="true" />
+    <div className="orb orb-4" aria-hidden="true" />
   </div>
 );
 export default AnimatedBackground;

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { Camera, RotateCcw, User, Check, X } from 'lucide-react';
@@ -18,6 +18,7 @@ const CameraPage = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Called directly from button click (user gesture required)
   const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -29,8 +30,12 @@ const CameraPage = () => {
         setStreaming(true);
         setError(null);
       }
-    } catch {
-      setError('Camera access denied. Please enable camera permissions in your browser settings.');
+    } catch (err) {
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        setError('Camera access denied. Please allow camera permissions in your browser settings and try again.');
+      } else {
+        setError('Could not access camera. Please make sure your device has a camera and try again.');
+      }
     }
   }, []);
 
@@ -42,11 +47,6 @@ const CameraPage = () => {
     setStreaming(false);
   }, []);
 
-  useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-  }, [startCamera, stopCamera]);
-
   const capture = useCallback(async () => {
     if (!videoRef.current) return;
     const canvas = document.createElement('canvas');
@@ -57,7 +57,6 @@ const CameraPage = () => {
     setPhoto(dataUrl);
     stopCamera();
 
-    // Auto-recognize
     setAnalyzing(true);
     try {
       const hash = await generatePerceptualHash(dataUrl);
@@ -136,7 +135,6 @@ const CameraPage = () => {
     setTagged(null);
     setAnalyzing(false);
     setError(null);
-    startCamera();
   };
 
   return (
@@ -208,25 +206,27 @@ const CameraPage = () => {
       ) : (
         <div className="space-y-4">
           <GlassCard className="overflow-hidden aspect-[4/3] flex items-center justify-center bg-foreground/5">
-            {error ? (
-              <div className="text-center p-8">
-                <Camera size={48} className="text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">{error}</p>
-                <button onClick={startCamera} className="btn-primary min-h-[48px]">Try Again</button>
-              </div>
-            ) : streaming ? (
-              <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" style={{ borderRadius: 'var(--radius-md)' }} />
+            {streaming ? (
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ borderRadius: 'var(--radius-md)' }} />
             ) : (
               <div className="text-center p-8">
-                <div className="w-8 h-8 border-2 border-soft-pink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-muted-foreground">Starting camera...</p>
+                <Camera size={48} className="text-muted-foreground mx-auto mb-4" />
+                {error ? (
+                  <p className="text-muted-foreground mb-4">{error}</p>
+                ) : (
+                  <p className="text-muted-foreground mb-4">Tap the button below to open your camera</p>
+                )}
               </div>
             )}
           </GlassCard>
 
-          {streaming && (
+          {streaming ? (
             <button onClick={capture} className="btn-pink w-full flex items-center justify-center gap-2 min-h-[48px]">
               <Camera size={20} /> Capture Photo
+            </button>
+          ) : (
+            <button onClick={startCamera} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]">
+              <Camera size={20} /> {error ? 'Try Again' : 'Open Camera'}
             </button>
           )}
 
