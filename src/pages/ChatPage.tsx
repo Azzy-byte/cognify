@@ -264,7 +264,15 @@ const ChatPage = () => {
       new_value: { summary },
     });
     setSaved(true);
-    setTimeout(() => { setMessages([]); setSaved(false); }, 1500);
+    setTimeout(() => {
+      messages
+        .flatMap(message => message.audio_urls || [])
+        .forEach(() => {
+          /* persisted data URLs, no revocation needed */
+        });
+      setMessages([]);
+      setSaved(false);
+    }, 1500);
   };
 
   const quickActions = [
