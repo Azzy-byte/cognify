@@ -157,6 +157,7 @@ const ChatPage = () => {
       }
     }, 600 + Math.random() * 400);
 
+    audioRecordings.forEach(recordingItem => URL.revokeObjectURL(recordingItem.url));
     setAudioRecordings([]);
   }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate, addReminder, addAuditEntry]);
 
