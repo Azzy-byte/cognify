@@ -202,8 +202,9 @@ const CameraPage = () => {
 
   const confirmMatch = async () => {
     if (!matchResult?.name || !photo) return;
+    const matchedName = matchResult.name;
     const person = people.find((p) =>
-      p.id === matchResult.personId || p.name.toLowerCase() === matchResult.name!.toLowerCase()
+      p.id === matchResult.personId || p.name.toLowerCase() === matchedName.toLowerCase()
     );
     const hash = await generatePerceptualHash(photo);
 
