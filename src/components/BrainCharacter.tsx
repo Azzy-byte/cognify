@@ -95,17 +95,17 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
           <path d="M112 74 C118 68, 130 68, 136 74" stroke="hsl(225 35% 30%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
           {/* Rosy cheek dots */}
-          <ellipse cx="58" cy="104" rx="8" ry="5" fill="hsl(0 70% 72%)" opacity="0.45" />
-          <ellipse cx="142" cy="104" rx="8" ry="5" fill="hsl(0 70% 72%)" opacity="0.45" />
+          <ellipse cx="58" cy="104" rx="8" ry="5" fill="hsl(350 75% 72%)" opacity="0.45" />
+          <ellipse cx="142" cy="104" rx="8" ry="5" fill="hsl(350 75% 72%)" opacity="0.45" />
 
           {/* Cute smile */}
-          <path d="M88 108 C94 116, 106 116, 112 108" stroke="hsl(12 40% 45%)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M88 108 C94 116, 106 116, 112 108" stroke="hsl(340 40% 45%)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
 
           {/* === LEGS === */}
           {/* Left leg */}
-          <rect x="78" y="132" width="8" height="22" rx="4" fill="hsl(12 50% 62%)" />
+          <rect x="78" y="132" width="8" height="22" rx="4" fill="hsl(340 45% 62%)" />
           {/* Right leg */}
-          <rect x="114" y="132" width="8" height="22" rx="4" fill="hsl(12 50% 62%)" />
+          <rect x="114" y="132" width="8" height="22" rx="4" fill="hsl(340 45% 62%)" />
           {/* Left foot */}
           <ellipse cx="80" cy="155" rx="8" ry="5" fill="hsl(12 50% 58%)" />
           {/* Right foot */}
