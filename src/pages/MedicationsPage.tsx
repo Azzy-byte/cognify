@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Plus, Pill, Clock, Trash2, Check, Bell, X, Calendar, Pencil, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Plus, Pill, Clock, Trash2, Check, Bell, X, Calendar, Pencil, AlertTriangle, ShieldAlert, Package } from 'lucide-react';
 import { checkInteractions, checkDuplicates, checkDoseChange, type InteractionAlert, type DuplicateAlert } from '@/lib/medicationInteractions';
 
 const InteractionWarning = ({
@@ -138,6 +138,7 @@ const MedicationsPage = () => {
   const [frequency, setFrequency] = useState('daily');
   const [times, setTimes] = useState<string[]>(['08:00']);
   const [prescriber, setPrescriber] = useState('');
+  const [supplyQty, setSupplyQty] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmDeleteReminder, setConfirmDeleteReminder] = useState<string | null>(null);
 
@@ -194,10 +195,15 @@ const MedicationsPage = () => {
 
   const commitAddMedication = () => {
     setPendingAlerts(null);
+    const dosesPerDay = times.length;
+    const qty = supplyQty ? parseInt(supplyQty) : undefined;
     addMedication({
       name: name.trim(), dosage: dosage.trim(), frequency, times,
       prescriber: prescriber.trim(), start_date: new Date().toISOString().split('T')[0],
       created_by: currentUser.id, last_modified_by: currentUser.id,
+      supply_quantity: qty,
+      doses_per_day: dosesPerDay,
+      supply_start_date: qty ? new Date().toISOString().split('T')[0] : undefined,
     });
     times.forEach(time => {
       addReminder({
@@ -211,9 +217,9 @@ const MedicationsPage = () => {
       timestamp: new Date().toISOString(), actor_id: currentUser.id,
       actor_name: `${currentUser.name} (${currentUser.role})`,
       action_type: 'medication_added', target_type: 'medication', target_id: '',
-      new_value: { name, dosage, times },
+      new_value: { name, dosage, times, supply: qty },
     });
-    setName(''); setDosage(''); setTimes(['08:00']); setPrescriber('');
+    setName(''); setDosage(''); setTimes(['08:00']); setPrescriber(''); setSupplyQty('');
     setShowForm(false);
   };
 
@@ -312,8 +318,83 @@ const MedicationsPage = () => {
 
   const activeReminders = reminders.filter(r => !r.completed);
 
+  // Calculate remaining supply for each medication
+  const getSupplyInfo = (med: typeof medications[0]) => {
+    if (!med.supply_quantity || !med.doses_per_day || !med.supply_start_date) return null;
+    const startDate = new Date(med.supply_start_date);
+    const today = new Date();
+    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / 86400000);
+    const dosesUsed = daysPassed * med.doses_per_day;
+    const remaining = Math.max(0, med.supply_quantity - dosesUsed);
+    const daysLeft = med.doses_per_day > 0 ? Math.floor(remaining / med.doses_per_day) : 0;
+    return { remaining, daysLeft, total: med.supply_quantity };
+  };
+
+  const lowSupplyMeds = medications.filter(med => {
+    const info = getSupplyInfo(med);
+    return info && info.daysLeft <= 7 && info.remaining > 0;
+  });
+
+  const outOfStockMeds = medications.filter(med => {
+    const info = getSupplyInfo(med);
+    return info && info.remaining <= 0;
+  });
+
   return (
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
+      {/* Refill alerts */}
+      {outOfStockMeds.length > 0 && (
+        <div className="mb-4 animate-fade-in">
+          {outOfStockMeds.map(med => (
+            <GlassCard key={med.id} className="p-3 mb-2 border border-destructive/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                  <Package size={18} className="text-destructive" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-foreground">{med.name} supply depleted</p>
+                  <p className="text-xs text-muted-foreground">Time to refill your prescription.</p>
+                </div>
+                <button
+                  onClick={() => updateMedication(med.id, { supply_start_date: new Date().toISOString().split('T')[0] })}
+                  className="text-xs font-medium px-3 py-1.5 bg-soft-pink/20 text-foreground rounded-full min-h-[36px] active:scale-95"
+                >
+                  Refilled
+                </button>
+              </div>
+            </GlassCard>
+          ))}
+        </div>
+      )}
+
+      {lowSupplyMeds.length > 0 && (
+        <div className="mb-4 animate-fade-in">
+          {lowSupplyMeds.map(med => {
+            const info = getSupplyInfo(med)!;
+            return (
+              <GlassCard key={med.id} className="p-3 mb-2 border border-peach/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-peach/15 flex items-center justify-center shrink-0">
+                    <Package size={18} className="text-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-foreground">{med.name} running low</p>
+                    <p className="text-xs text-muted-foreground">
+                      {info.remaining} {info.remaining === 1 ? 'dose' : 'doses'} left ({info.daysLeft} {info.daysLeft === 1 ? 'day' : 'days'})
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateMedication(med.id, { supply_start_date: new Date().toISOString().split('T')[0] })}
+                    className="text-xs font-medium px-3 py-1.5 bg-soft-pink/20 text-foreground rounded-full min-h-[36px] active:scale-95"
+                  >
+                    Refilled
+                  </button>
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
       {/* Interaction warning modal */}
       {pendingAlerts && (
         <InteractionWarning
@@ -369,6 +450,11 @@ const MedicationsPage = () => {
                 <button onClick={() => setTimes(prev => [...prev, '12:00'])} className="text-sm text-soft-pink hover:underline min-h-[44px]">+ Add time</button>
               </div>
               <input value={prescriber} onChange={e => setPrescriber(e.target.value)} placeholder="Prescriber" className="input-glass w-full" />
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Supply quantity (optional)</label>
+                <input type="number" value={supplyQty} onChange={e => setSupplyQty(e.target.value)} placeholder="e.g., 30 tablets" className="input-glass w-full" min="1" />
+                <p className="text-xs text-muted-foreground mt-1">We will alert you when your supply is running low.</p>
+              </div>
               <button onClick={attemptAddMedication} className="btn-primary w-full min-h-[48px] active:scale-95">Add Medication</button>
             </div>
           ) : (
@@ -460,13 +546,39 @@ const MedicationsPage = () => {
                 </div>
               ) : (
                 <div className="flex justify-between items-start">
-                  <div className="flex-1">
+                <div className="flex-1">
                     <h3 className="font-semibold text-foreground">{med.name}</h3>
                     <p className="text-sm text-muted-foreground">{med.dosage} - {med.frequency}</p>
                     <div className="flex gap-2 mt-1">
                       {med.times.map((t, i) => <span key={i} className="pill-badge text-xs">{t}</span>)}
                     </div>
                     {med.prescriber && <p className="text-xs text-muted-foreground mt-1">Prescribed by {med.prescriber}</p>}
+                    {(() => {
+                      const info = getSupplyInfo(med);
+                      if (!info) return null;
+                      const pct = Math.round((info.remaining / info.total) * 100);
+                      const isLow = info.daysLeft <= 7;
+                      const isEmpty = info.remaining <= 0;
+                      return (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Package size={12} />
+                              {isEmpty ? 'Out of stock' : `${info.remaining} doses left (${info.daysLeft}d)`}
+                            </span>
+                            <span className={`font-medium ${isEmpty ? 'text-destructive' : isLow ? 'text-peach' : 'text-mint'}`}>
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${isEmpty ? 'bg-destructive' : isLow ? 'bg-peach' : 'bg-mint'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center gap-1">
                     {canEdit(med.created_by) && (

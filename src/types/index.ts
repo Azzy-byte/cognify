@@ -48,6 +48,9 @@ export interface Medication {
   created_by: string;
   last_modified_by: string;
   created_at: string;
+  supply_quantity?: number;
+  doses_per_day?: number;
+  supply_start_date?: string;
 }
 
 export interface Reminder {
