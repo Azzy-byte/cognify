@@ -198,7 +198,7 @@ const CameraPage = () => {
       setMatchResult({ recognized: false });
     }
     setAnalyzing(false);
-  }, [people, stopCamera, getPeopleWithMemoryHashes]);
+  }, [stopCamera, getPeopleWithMemoryHashes]);
 
   const confirmMatch = async () => {
     if (!matchResult?.name || !photo) return;
