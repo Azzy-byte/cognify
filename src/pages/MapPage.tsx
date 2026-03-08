@@ -54,23 +54,47 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null;
 }
 
-const LostBanner = ({ closestZone, distance, onSOS }: { closestZone: string; distance: number; onSOS: () => void }) => (
+const LostBanner = ({
+  closestZone,
+  distance,
+  reason,
+  onSOS,
+  onDirections,
+  onDismiss,
+}: {
+  closestZone: string;
+  distance: number;
+  reason: string;
+  onSOS: () => void;
+  onDirections: () => void;
+  onDismiss: () => void;
+}) => (
   <div className="fixed top-0 left-0 right-0 z-[80] animate-fade-in">
     <div className="max-w-lg mx-auto px-4 pt-14">
-      <div className="bg-destructive/95 backdrop-blur-sm text-destructive-foreground p-4 flex items-center gap-3" style={{ borderRadius: 'var(--radius-md)' }}>
-        <AlertTriangle size={24} className="shrink-0" />
-        <div className="flex-1">
-          <p className="font-semibold text-sm">Are you lost?</p>
-          <p className="text-xs opacity-90">
-            You are {formatDistance(distance)} from {closestZone}
-          </p>
+      <div className="bg-destructive/95 backdrop-blur-sm text-destructive-foreground p-4" style={{ borderRadius: 'var(--radius-md)' }}>
+        <div className="flex items-start gap-3">
+          <AlertTriangle size={24} className="shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">Are you lost?</p>
+            <p className="text-xs opacity-90">You are {formatDistance(distance)} from {closestZone}</p>
+            <p className="text-xs opacity-80 mt-1">Detected: {reason}</p>
+          </div>
+          <button onClick={onDismiss} className="text-destructive-foreground/80 hover:text-destructive-foreground min-h-[36px] px-2" aria-label="Dismiss">✕</button>
         </div>
-        <button
-          onClick={onSOS}
-          className="px-4 py-2 bg-destructive-foreground text-destructive font-bold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
-        >
-          SOS
-        </button>
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            onClick={onSOS}
+            className="px-3 py-2 bg-destructive-foreground text-destructive font-bold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
+          >
+            Press SOS
+          </button>
+          <button
+            onClick={onDirections}
+            className="px-3 py-2 bg-card/90 text-foreground font-semibold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
+          >
+            Show Way Home
+          </button>
+        </div>
       </div>
     </div>
   </div>
