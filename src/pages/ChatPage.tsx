@@ -99,6 +99,7 @@ const ChatPage = () => {
       role: 'user',
       text: input,
       image_urls: images.length > 0 ? [...images] : undefined,
+      audio_urls: audioRecordings.length > 0 ? audioRecordings.map(r => r.url) : undefined,
     };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
