@@ -3,6 +3,7 @@ import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Search, X, Pencil, Trash2, Plus, BookOpen, Volume2 } from 'lucide-react';
+import FaceSuggestion from '@/components/FaceSuggestion';
 import type { Memory } from '@/types';
 
 const categories = ['All', 'Family', 'Social', 'Health', 'General'] as const;
@@ -285,6 +286,15 @@ const MemoriesPage = () => {
                   <img key={j} src={url} alt="Memory photo" className="w-full h-32 object-cover rounded-xl" loading="lazy" />
                 ))}
               </div>
+            )}
+
+            {/* Face suggestion confirmation */}
+            {selectedMemory.image_urls.length > 0 && (
+              <FaceSuggestion
+                imageUrls={selectedMemory.image_urls}
+                memoryId={selectedMemory.id}
+                existingPeople={selectedMemory.people}
+              />
             )}
 
             {selectedMemory.conversation.length > 0 && (
