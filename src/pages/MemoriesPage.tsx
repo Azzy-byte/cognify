@@ -120,7 +120,7 @@ const MemoriesPage = () => {
               {selectedMemory.people.map(p => <span key={p} className="pill-badge">👤 {p}</span>)}
               <span className="pill-badge">{selectedMemory.category}</span>
             </div>
-          </GlassCard>
+          </div>
         </div>
       )}
     </div>
