@@ -79,7 +79,7 @@
     box-shadow: 0 12px 40px hsla(var(--glass-shadow));
   }
   .gradient-bg {
-    background: linear-gradient(135deg, #FFF8F0 0%, #FFE8F0 25%, #E8F4F8 50%, #E8F8F0 75%, #FFF8F0 100%);
+    background: hsl(var(--background));
     min-height: 100vh;
   }
   .btn-primary {
