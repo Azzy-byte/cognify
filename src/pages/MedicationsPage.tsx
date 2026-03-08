@@ -352,7 +352,7 @@ const MedicationsPage = () => {
       new_value: { name: editMedName, dosage: editMedDosage },
     });
     if (changes.length > 0) {
-      notifyCaretaker('Medication changed', editMedName.trim(), changes.join(', '));
+      notifyCaretaker('Medication changed', editMedName.trim(), changes.join(', '), editingMed);
     }
     setEditingMed(null);
     setDoseWarning(null);
