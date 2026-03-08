@@ -37,7 +37,10 @@ const CameraPage = () => {
 
     const buildMemoryHashes = async () => {
       if (people.length === 0) {
-        if (active) setMemoryHashesByPerson({});
+        if (active) {
+          setMemoryHashesByPerson({});
+          setHashingMemoryPhotos(false);
+        }
         return;
       }
 
