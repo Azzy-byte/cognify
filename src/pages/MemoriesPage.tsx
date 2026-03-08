@@ -295,6 +295,29 @@ const MemoriesPage = () => {
               </div>
             )}
 
+            {/* Audio recordings in detail modal */}
+            {selectedMemory.audio_urls && selectedMemory.audio_urls.length > 0 && (
+              <div className="mb-4 space-y-2">
+                <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  <Volume2 size={14} /> Audio Recordings
+                </p>
+                {selectedMemory.audio_urls.map((url, j) => (
+                  <div key={j} className="bg-lavender/10 rounded-xl p-3">
+                    <audio src={url} controls className="w-full h-8" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedMemory.audio_url && !selectedMemory.audio_urls?.length && (
+              <div className="mb-4 bg-lavender/10 rounded-xl p-3">
+                <p className="text-sm font-medium text-foreground flex items-center gap-1.5 mb-2">
+                  <Volume2 size={14} /> Audio Recording
+                </p>
+                <audio src={selectedMemory.audio_url} controls className="w-full h-8" />
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2 mb-4">
               {selectedMemory.people.map(p => <span key={p} className="pill-badge">{p}</span>)}
               <span className="pill-badge">{selectedMemory.category}</span>
