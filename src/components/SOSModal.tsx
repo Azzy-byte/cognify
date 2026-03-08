@@ -93,26 +93,31 @@ const SOSModal = ({ open, onClose }: SOSModalProps) => {
       return;
     }
 
-    const openDirections = (lat: number, lng: number) => {
-      window.open(
-        `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`,
-        '_blank'
-      );
+    // Open tab synchronously on click to avoid popup blockers.
+    const directionsWindow = window.open('', '_blank');
+
+    const navigateToDirections = (lat: number, lng: number) => {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${homeZone.lat},${homeZone.lng}&travelmode=walking`;
+      if (directionsWindow) {
+        directionsWindow.location.href = url;
+        return;
+      }
+      window.location.href = url;
     };
 
     if (currentPos && currentPos.lat !== 0) {
-      openDirections(currentPos.lat, currentPos.lng);
+      navigateToDirections(currentPos.lat, currentPos.lng);
       return;
     }
 
-    // Try to get fresh location
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setCurrentPos(loc);
-        openDirections(loc.lat, loc.lng);
+        navigateToDirections(loc.lat, loc.lng);
       },
       () => {
+        if (directionsWindow) directionsWindow.close();
         toast.info('Location not available. Please enable GPS.');
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
