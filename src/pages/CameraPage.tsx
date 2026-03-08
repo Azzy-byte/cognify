@@ -331,7 +331,7 @@ const CameraPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.relationship} · {p.photo_hashes.length} photo(s)</p>
+                        <p className="text-xs text-muted-foreground">{p.relationship} · {new Set([...(p.photo_hashes || []), ...(memoryHashesByPerson[p.id] || [])]).size} face hash(es)</p>
                       </div>
                     </div>
                     <button onClick={() => handleDeletePerson(p.id)} className={`p-2 rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${confirmDeletePerson === p.id ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`}>
