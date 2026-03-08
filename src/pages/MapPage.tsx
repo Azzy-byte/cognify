@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Trash2, Shield, Navigation as NavIcon } from 'lucide-react';
+import { Trash2, Shield, Navigation as NavIcon, Plus, MapPin, X, Pencil } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Circle, Polyline, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -15,6 +15,12 @@ L.Icon.Default.mergeOptions({
 
 const blueIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+});
+
+const greenIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
 });
@@ -33,28 +39,44 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)}m away`;
+  return `${(meters / 1000).toFixed(1)}km away`;
+}
+
 const MapPage = () => {
   const { locations, safeZones, currentUser, addLocation, addSafeZone, updateSafeZone, deleteSafeZone, addAuditEntry } = useApp();
-  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number }>({ lat: 40.7128, lng: -74.006 });
+  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
   const [tracking, setTracking] = useState(false);
   const [editingZone, setEditingZone] = useState<string | null>(null);
   const [zoneName, setZoneName] = useState('');
+  const [showAddZone, setShowAddZone] = useState(false);
+  const [newZoneName, setNewZoneName] = useState('');
+  const [newZoneRadius, setNewZoneRadius] = useState(500);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const watchRef = useRef<number | null>(null);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
-      pos => setCurrentPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {}
+      pos => { setCurrentPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setGeoError(null); },
+      (err) => {
+        if (err.code === 1) setGeoError('Location access denied. Please enable location permissions.');
+        else setGeoError('Could not get your location. Please try again.');
+        // Fallback position
+        setCurrentPos({ lat: 40.7128, lng: -74.006 });
+      }
     );
   }, []);
 
   const startTracking = useCallback(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) { setGeoError('Geolocation not supported'); return; }
     if ('Notification' in window) Notification.requestPermission();
     const id = navigator.geolocation.watchPosition(
       pos => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setCurrentPos(loc);
+        setGeoError(null);
         addLocation({
           user_id: currentUser.id, lat: loc.lat, lng: loc.lng,
           accuracy: pos.coords.accuracy, timestamp: new Date().toISOString(),
@@ -62,7 +84,7 @@ const MapPage = () => {
         // Lost detection
         const hour = new Date().getHours();
         const isNight = hour >= 20 || hour < 6;
-        if (isNight) {
+        if (isNight && safeZones.length > 0) {
           let inZone = false;
           let closestZone = safeZones[0];
           let minDist = Infinity;
@@ -72,15 +94,14 @@ const MapPage = () => {
             if (d <= z.radius_meters) { inZone = true; break; }
           }
           if (!inZone && minDist > 500 && 'Notification' in window && Notification.permission === 'granted') {
-            const distKm = (minDist / 1000).toFixed(1);
             new Notification('Are you lost?', {
-              body: `You are ${distKm}km from ${closestZone?.name || 'your safe zone'}. Need help?`,
+              body: `You are ${formatDistance(minDist)} from ${closestZone?.name || 'your safe zone'}. Need help?`,
             });
           }
         }
       },
-      undefined,
-      { enableHighAccuracy: true }
+      () => setGeoError('Lost GPS signal. Trying to reconnect...'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
     );
     watchRef.current = id;
     setTracking(true);
@@ -88,15 +109,17 @@ const MapPage = () => {
 
   const stopTracking = () => {
     if (watchRef.current !== null) navigator.geolocation?.clearWatch(watchRef.current);
+    watchRef.current = null;
     setTracking(false);
   };
 
-  const addCurrentAsSafe = () => {
+  const handleAddSafeZone = () => {
     if (!currentPos) return;
+    const name = newZoneName.trim() || 'My Location';
     addSafeZone({
-      user_id: currentUser.id, name: 'My Location',
+      user_id: currentUser.id, name,
       lat: currentPos.lat, lng: currentPos.lng,
-      radius_meters: 500, active_hours_start: '00:00', active_hours_end: '23:59',
+      radius_meters: newZoneRadius, active_hours_start: '00:00', active_hours_end: '23:59',
     });
     addAuditEntry({
       timestamp: new Date().toISOString(),
@@ -104,93 +127,172 @@ const MapPage = () => {
       actor_name: `${currentUser.name} (${currentUser.role})`,
       action_type: 'safe_zone_added',
       target_type: 'safe_zone', target_id: '',
-      new_value: { name: 'My Location', lat: currentPos.lat, lng: currentPos.lng },
+      new_value: { name, lat: currentPos.lat, lng: currentPos.lng, radius: newZoneRadius },
     });
+    setNewZoneName('');
+    setNewZoneRadius(500);
+    setShowAddZone(false);
+  };
+
+  const handleDeleteZone = (id: string) => {
+    if (confirmDelete !== id) { setConfirmDelete(id); return; }
+    deleteSafeZone(id);
+    setConfirmDelete(null);
   };
 
   const recentLocations = locations.slice(-50).map(l => [l.lat, l.lng] as [number, number]);
+  const defaultCenter: [number, number] = currentPos ? [currentPos.lat, currentPos.lng] : [40.7128, -74.006];
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
-      <h1 className="text-2xl font-bold mb-4">Location & Safe Zones</h1>
-
-      {currentPos && (
-        <GlassCard className="overflow-hidden mb-4" style={{ height: 350 }}>
-          <MapContainer center={[currentPos.lat, currentPos.lng]} zoom={14} style={{ height: '100%', width: '100%' }}>
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <RecenterMap lat={currentPos.lat} lng={currentPos.lng} />
-            <Marker position={[currentPos.lat, currentPos.lng]} icon={blueIcon}>
-              <Popup>Current Location</Popup>
-            </Marker>
-            {safeZones.map(z => (
-              <Circle key={z.id} center={[z.lat, z.lng]} radius={z.radius_meters}
-                pathOptions={{ color: '#A8E6CF', fillColor: '#A8E6CF', fillOpacity: 0.2 }}>
-                <Popup>{z.name}</Popup>
-              </Circle>
-            ))}
-            {recentLocations.length > 1 && (
-              <Polyline positions={recentLocations} pathOptions={{ color: '#A8D8EA', weight: 3, opacity: 0.7 }} />
-            )}
-          </MapContainer>
-        </GlassCard>
-      )}
-
-      <div className="flex gap-2 mb-4">
-        <button onClick={addCurrentAsSafe} className="btn-primary flex-1 flex items-center justify-center gap-2 min-h-[48px]">
-          <Shield size={18} /> Set Current Area as Safe
-        </button>
-        <button onClick={tracking ? stopTracking : startTracking}
-          className={`rounded-full min-h-[48px] min-w-[48px] px-4 font-semibold transition-colors duration-200 flex items-center justify-center ${tracking ? 'bg-destructive/20 text-destructive' : 'bg-mint/20 text-mint'}`}
-          aria-label={tracking ? 'Stop tracking' : 'Start tracking'}
+    <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Location & Safety</h1>
+        <button
+          onClick={tracking ? stopTracking : startTracking}
+          className={`flex items-center gap-2 px-4 min-h-[44px] rounded-xl font-medium transition-colors duration-200 ${tracking ? 'bg-destructive/20 text-destructive' : 'bg-mint/20 text-foreground'}`}
         >
-          <NavIcon size={18} />
+          <NavIcon size={16} />
+          <span className="text-sm">{tracking ? 'Stop' : 'Track'}</span>
         </button>
       </div>
+
+      {geoError && (
+        <GlassCard className="p-3 mb-4 border-destructive/30">
+          <p className="text-sm text-destructive">{geoError}</p>
+        </GlassCard>
+      )}
 
       {tracking && (
         <GlassCard className="p-3 mb-4 flex items-center gap-2 animate-fade-in">
           <div className="w-3 h-3 rounded-full bg-mint animate-pulse" />
-          <span className="text-sm">Tracking active - {locations.length} points recorded</span>
+          <span className="text-sm">Live tracking · {locations.length} points</span>
+          {currentPos && (
+            <span className="text-xs text-muted-foreground ml-auto">
+              {currentPos.lat.toFixed(4)}, {currentPos.lng.toFixed(4)}
+            </span>
+          )}
         </GlassCard>
       )}
 
-      <h2 className="text-lg font-semibold mb-3">Safe Zones</h2>
-      <div className="space-y-2">
-        {safeZones.map(z => (
-          <GlassCard key={z.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                {editingZone === z.id ? (
-                  <input value={zoneName} onChange={e => setZoneName(e.target.value)}
-                    onBlur={() => { updateSafeZone(z.id, { name: zoneName }); setEditingZone(null); }}
-                    className="input-glass text-sm py-1 px-2" autoFocus />
-                ) : (
-                  <p className="font-medium cursor-pointer" onClick={() => { setEditingZone(z.id); setZoneName(z.name); }}>
-                    {z.name}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">{z.radius_meters}m radius</p>
-              </div>
-              <button onClick={() => deleteSafeZone(z.id)} className="p-2 text-destructive/60 hover:text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Delete safe zone">
-                <Trash2 size={16} />
-              </button>
-            </div>
-            <div className="mt-2">
-              <input type="range" min={100} max={5000} step={100} value={z.radius_meters}
-                onChange={e => updateSafeZone(z.id, { radius_meters: parseInt(e.target.value) })}
-                className="w-full accent-mint" aria-label="Adjust radius" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>100m</span><span>5000m</span>
-              </div>
-            </div>
-          </GlassCard>
-        ))}
+      {/* Map */}
+      <GlassCard className="overflow-hidden mb-4" style={{ height: 320 }}>
+        <MapContainer center={defaultCenter} zoom={14} style={{ height: '100%', width: '100%' }}>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {currentPos && (
+            <>
+              <RecenterMap lat={currentPos.lat} lng={currentPos.lng} />
+              <Marker position={[currentPos.lat, currentPos.lng]} icon={blueIcon}>
+                <Popup>📍 You are here</Popup>
+              </Marker>
+            </>
+          )}
+          {safeZones.map(z => (
+            <React.Fragment key={z.id}>
+              <Circle center={[z.lat, z.lng]} radius={z.radius_meters}
+                pathOptions={{ color: 'hsl(150, 55%, 60%)', fillColor: 'hsl(150, 55%, 80%)', fillOpacity: 0.2, weight: 2 }}>
+                <Popup>🛡️ {z.name} ({z.radius_meters}m)</Popup>
+              </Circle>
+              <Marker position={[z.lat, z.lng]} icon={greenIcon}>
+                <Popup>🛡️ {z.name}</Popup>
+              </Marker>
+            </React.Fragment>
+          ))}
+          {recentLocations.length > 1 && (
+            <Polyline positions={recentLocations} pathOptions={{ color: 'hsl(199, 62%, 60%)', weight: 3, opacity: 0.6, dashArray: '8 4' }} />
+          )}
+        </MapContainer>
+      </GlassCard>
+
+      {/* Add Safe Zone */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2"><Shield size={20} /> Safe Zones</h2>
+        <button onClick={() => setShowAddZone(!showAddZone)} className="p-3 rounded-full bg-mint/20 hover:bg-mint/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Add safe zone">
+          {showAddZone ? <X size={20} /> : <Plus size={20} />}
+        </button>
       </div>
+
+      {showAddZone && (
+        <GlassCard className="p-4 mb-4 animate-scale-in">
+          <h3 className="font-semibold mb-3">Add Safe Zone at Current Location</h3>
+          <div className="space-y-3">
+            <input value={newZoneName} onChange={e => setNewZoneName(e.target.value)} placeholder="Zone name (e.g. Home, Hospital)" className="input-glass w-full" />
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">Radius: {newZoneRadius}m</label>
+              <input type="range" min={100} max={5000} step={100} value={newZoneRadius}
+                onChange={e => setNewZoneRadius(parseInt(e.target.value))}
+                className="w-full accent-mint" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>100m</span><span>5km</span>
+              </div>
+            </div>
+            <button onClick={handleAddSafeZone} className="btn-secondary w-full min-h-[48px] flex items-center justify-center gap-2">
+              <MapPin size={18} /> Save Safe Zone
+            </button>
+          </div>
+        </GlassCard>
+      )}
+
+      {/* Safe Zones List */}
+      {safeZones.length === 0 ? (
+        <GlassCard className="p-6 text-center">
+          <Shield size={32} className="text-mint mx-auto mb-3 opacity-50" />
+          <p className="text-muted-foreground text-sm">No safe zones yet. Add one to enable lost detection alerts.</p>
+        </GlassCard>
+      ) : (
+        <div className="space-y-2">
+          {safeZones.map(z => {
+            const dist = currentPos ? getDistance(currentPos.lat, currentPos.lng, z.lat, z.lng) : null;
+            const isInside = dist !== null && dist <= z.radius_meters;
+
+            return (
+              <GlassCard key={z.id} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex-1">
+                    {editingZone === z.id ? (
+                      <div className="flex gap-2">
+                        <input value={zoneName} onChange={e => setZoneName(e.target.value)}
+                          className="input-glass text-sm py-1 px-2 flex-1" autoFocus />
+                        <button onClick={() => { updateSafeZone(z.id, { name: zoneName }); setEditingZone(null); }}
+                          className="text-sm text-mint font-medium min-h-[36px] px-3">Save</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{z.name}</p>
+                        <button onClick={() => { setEditingZone(z.id); setZoneName(z.name); }}
+                          className="p-1 rounded hover:bg-muted"><Pencil size={12} className="text-muted-foreground" /></button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${isInside ? 'bg-mint/20 text-foreground' : 'bg-soft-pink/20 text-foreground'}`}>
+                        {isInside ? '✓ Inside zone' : dist !== null ? formatDistance(dist) : 'Unknown'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{z.radius_meters}m radius</span>
+                    </div>
+                  </div>
+                  <button onClick={() => handleDeleteZone(z.id)}
+                    className={`p-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-colors ${confirmDelete === z.id ? 'text-destructive bg-destructive/10' : 'text-muted-foreground hover:text-destructive'}`}
+                    aria-label="Delete safe zone">
+                    {confirmDelete === z.id ? <X size={16} /> : <Trash2 size={16} />}
+                  </button>
+                </div>
+
+                {/* Radius slider */}
+                <input type="range" min={100} max={5000} step={100} value={z.radius_meters}
+                  onChange={e => updateSafeZone(z.id, { radius_meters: parseInt(e.target.value) })}
+                  className="w-full accent-mint" aria-label="Adjust radius" />
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
+
+// Need React import for React.Fragment
+import React from 'react';
 
 export default MapPage;
