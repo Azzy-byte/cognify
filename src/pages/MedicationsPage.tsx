@@ -318,8 +318,83 @@ const MedicationsPage = () => {
 
   const activeReminders = reminders.filter(r => !r.completed);
 
+  // Calculate remaining supply for each medication
+  const getSupplyInfo = (med: typeof medications[0]) => {
+    if (!med.supply_quantity || !med.doses_per_day || !med.supply_start_date) return null;
+    const startDate = new Date(med.supply_start_date);
+    const today = new Date();
+    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / 86400000);
+    const dosesUsed = daysPassed * med.doses_per_day;
+    const remaining = Math.max(0, med.supply_quantity - dosesUsed);
+    const daysLeft = med.doses_per_day > 0 ? Math.floor(remaining / med.doses_per_day) : 0;
+    return { remaining, daysLeft, total: med.supply_quantity };
+  };
+
+  const lowSupplyMeds = medications.filter(med => {
+    const info = getSupplyInfo(med);
+    return info && info.daysLeft <= 7 && info.remaining > 0;
+  });
+
+  const outOfStockMeds = medications.filter(med => {
+    const info = getSupplyInfo(med);
+    return info && info.remaining <= 0;
+  });
+
   return (
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
+      {/* Refill alerts */}
+      {outOfStockMeds.length > 0 && (
+        <div className="mb-4 animate-fade-in">
+          {outOfStockMeds.map(med => (
+            <GlassCard key={med.id} className="p-3 mb-2 border border-destructive/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                  <Package size={18} className="text-destructive" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-foreground">{med.name} supply depleted</p>
+                  <p className="text-xs text-muted-foreground">Time to refill your prescription.</p>
+                </div>
+                <button
+                  onClick={() => updateMedication(med.id, { supply_start_date: new Date().toISOString().split('T')[0] })}
+                  className="text-xs font-medium px-3 py-1.5 bg-soft-pink/20 text-foreground rounded-full min-h-[36px] active:scale-95"
+                >
+                  Refilled
+                </button>
+              </div>
+            </GlassCard>
+          ))}
+        </div>
+      )}
+
+      {lowSupplyMeds.length > 0 && (
+        <div className="mb-4 animate-fade-in">
+          {lowSupplyMeds.map(med => {
+            const info = getSupplyInfo(med)!;
+            return (
+              <GlassCard key={med.id} className="p-3 mb-2 border border-peach/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-peach/15 flex items-center justify-center shrink-0">
+                    <Package size={18} className="text-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-foreground">{med.name} running low</p>
+                    <p className="text-xs text-muted-foreground">
+                      {info.remaining} {info.remaining === 1 ? 'dose' : 'doses'} left ({info.daysLeft} {info.daysLeft === 1 ? 'day' : 'days'})
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateMedication(med.id, { supply_start_date: new Date().toISOString().split('T')[0] })}
+                    className="text-xs font-medium px-3 py-1.5 bg-soft-pink/20 text-foreground rounded-full min-h-[36px] active:scale-95"
+                  >
+                    Refilled
+                  </button>
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
       {/* Interaction warning modal */}
       {pendingAlerts && (
         <InteractionWarning
