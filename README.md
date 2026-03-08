@@ -251,12 +251,6 @@ Visit `http://localhost:5173` to see Cognify in action.
 
 ---
 
-## 📄 License
-
-Built with ❤️ for the people who need it most.
-
----
-
 <p align="center">
   <strong>Cognify</strong> — Because every memory matters.
 </p>
