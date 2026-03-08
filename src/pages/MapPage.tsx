@@ -147,10 +147,13 @@ const MapPage = () => {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isLost, setIsLost] = useState(false);
-  const [lostInfo, setLostInfo] = useState<{ zone: string; distance: number } | null>(null);
+  const [lostInfo, setLostInfo] = useState<{ zone: string; distance: number; reason: string } | null>(null);
   const [showNavHome, setShowNavHome] = useState(false);
   const watchRef = useRef<number | null>(null);
   const lostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const movementHistoryRef = useRef<Array<{ lat: number; lng: number; at: number }>>([]);
+  const outsideHomeSinceRef = useRef<number | null>(null);
+  const lostSnoozedUntilRef = useRef<number>(0);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
