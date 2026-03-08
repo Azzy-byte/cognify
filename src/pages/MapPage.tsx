@@ -307,7 +307,17 @@ const MapPage = () => {
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
       {/* Lost detection banner */}
       {isLost && lostInfo && (
-        <LostBanner closestZone={lostInfo.zone} distance={lostInfo.distance} onSOS={handleSOS} />
+        <LostBanner
+          closestZone={lostInfo.zone}
+          distance={lostInfo.distance}
+          reason={lostInfo.reason}
+          onSOS={handleSOS}
+          onDirections={handleShowDirections}
+          onDismiss={() => {
+            setIsLost(false);
+            lostSnoozedUntilRef.current = Date.now() + 5 * 60 * 1000;
+          }}
+        />
       )}
 
       {/* Navigate home overlay */}
