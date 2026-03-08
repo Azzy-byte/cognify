@@ -131,26 +131,82 @@ const DoseChangeWarning = ({
 );
 
 const MedicationsPage = () => {
-  const { medications, reminders, contacts, currentUser, addMedication, updateMedication, deleteMedication, addReminder, updateReminder, deleteReminder, addAuditEntry, canEdit } = useApp();
+  const {
+    medications,
+    reminders,
+    contacts,
+    familyMembers,
+    users,
+    currentUser,
+    addMedication,
+    updateMedication,
+    deleteMedication,
+    addReminder,
+    updateReminder,
+    deleteReminder,
+    addAuditEntry,
+    canEdit,
+  } = useApp();
 
-  const notifyCaretaker = useCallback((action: string, medName: string, details?: string) => {
-    const emergencyContacts = contacts.filter(c => c.is_emergency);
-    if (emergencyContacts.length === 0) return;
-    const names = emergencyContacts.map(c => c.name).join(', ');
-    toast.warning(`⚠️ Caretaker Alert Sent`, {
+  const notifyCaretaker = useCallback((action: string, medName: string, details?: string, medicationId?: string) => {
+    const emergencyContacts = contacts.filter(c => c.is_emergency).map(c => ({
+      name: c.name,
+      relationship: c.relationship || 'Emergency contact',
+      channel: c.phone,
+    }));
+
+    const caretakerMembers = familyMembers
+      .map(fm => {
+        const user = users.find(u => u.id === fm.family_user_id);
+        if (!user?.name) return null;
+        return {
+          name: user.name,
+          relationship: fm.relationship || 'Caretaker',
+          channel: user.email || user.id,
+        };
+      })
+      .filter((v): v is { name: string; relationship: string; channel: string } => Boolean(v));
+
+    const recipients = [...emergencyContacts, ...caretakerMembers].filter(
+      (r, index, arr) => arr.findIndex(x => x.channel === r.channel) === index
+    );
+
+    if (recipients.length === 0) {
+      toast.info('No emergency contact/caretaker set yet', {
+        description: 'Add one in Family to send medication safety alerts.',
+      });
+      return;
+    }
+
+    const names = recipients.map(r => `${r.name} (${r.relationship})`).join(', ');
+
+    toast.warning('Caretaker alert sent', {
       description: `${action}: ${medName}${details ? ` — ${details}` : ''}. Notified: ${names}`,
-      duration: 5000,
+      duration: 6000,
     });
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Medication safety update', {
+        body: `${action}: ${medName}${details ? ` (${details})` : ''}`,
+        tag: `medication-alert-${medicationId || medName}`,
+      });
+    }
+
     addAuditEntry({
       timestamp: new Date().toISOString(),
       actor_id: currentUser.id,
       actor_name: `${currentUser.name} (${currentUser.role})`,
       action_type: 'caretaker_notified',
       target_type: 'medication',
-      target_id: '',
-      new_value: { action, medication: medName, details, contacts_notified: emergencyContacts.map(c => c.name) },
+      target_id: medicationId || '',
+      new_value: {
+        action,
+        medication: medName,
+        details,
+        recipients,
+      },
     });
-  }, [contacts, currentUser, addAuditEntry]);
+  }, [contacts, familyMembers, users, currentUser, addAuditEntry]);
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'medication' | 'routine'>('medication');
   const [name, setName] = useState('');
