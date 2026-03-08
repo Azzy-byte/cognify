@@ -288,6 +288,15 @@ const MemoriesPage = () => {
               </div>
             )}
 
+            {/* Face suggestion confirmation */}
+            {selectedMemory.image_urls.length > 0 && (
+              <FaceSuggestion
+                imageUrls={selectedMemory.image_urls}
+                memoryId={selectedMemory.id}
+                existingPeople={selectedMemory.people}
+              />
+            )}
+
             {selectedMemory.conversation.length > 0 && (
               <div className="mb-4 p-3 bg-muted/20 rounded-xl">
                 <p className="text-sm text-muted-foreground leading-relaxed">
