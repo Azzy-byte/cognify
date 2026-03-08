@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, X, Pencil, Trash2, Plus, BookOpen } from 'lucide-react';
+import { Search, X, Pencil, Trash2, Plus, BookOpen, Volume2 } from 'lucide-react';
 import type { Memory } from '@/types';
 
 const categories = ['All', 'Family', 'Social', 'Health', 'General'] as const;
