@@ -337,9 +337,11 @@ const CameraPage = () => {
     if (!name.trim() || !photo) return;
     let hash = '';
     try { hash = await generatePerceptualHash(photo); } catch { /* empty */ }
+    const visuallyLinkedMemoryHashes = hash ? getVisualNeighborHashes([hash], memoryImageHashes, 0.34) : [];
+    const mergedHashes = hash ? [...new Set([hash, ...visuallyLinkedMemoryHashes])] : [];
     addPerson({
       name: name.trim(), relationship: getRelationshipValue(),
-      photo_urls: [photo], photo_hashes: hash ? [hash] : [], times_mentioned: 1,
+      photo_urls: [photo], photo_hashes: mergedHashes, times_mentioned: 1,
     });
     addAuditEntry({
       timestamp: new Date().toISOString(),
