@@ -28,7 +28,7 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
 
 const MapPage = () => {
   const { locations, safeZones, currentUser, addLocation, addSafeZone, updateSafeZone, deleteSafeZone, addAuditEntry } = useApp();
-  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number }>({ lat: 40.7128, lng: -74.006 });
   const [tracking, setTracking] = useState(false);
   const [editingZone, setEditingZone] = useState<string | null>(null);
   const [zoneName, setZoneName] = useState('');
@@ -38,7 +38,7 @@ const MapPage = () => {
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
       pos => setCurrentPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setCurrentPos({ lat: 40.7128, lng: -74.006 }) // Default NYC
+      () => {} // Keep default NYC
     );
   }, []);
 
