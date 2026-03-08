@@ -169,6 +169,13 @@ const MemoriesPage = () => {
         <div className="space-y-3">
           {filtered.map(memory => (
             <GlassCard key={memory.id} className="p-4 cursor-pointer glass-card-hover" onClick={() => setSelectedMemory(memory)}>
+              {memory.image_urls.length > 0 && (
+                <div className="grid grid-cols-3 gap-1 mb-2 -mx-1 -mt-1">
+                  {memory.image_urls.slice(0, 3).map((url, j) => (
+                    <img key={j} src={url} alt="Memory photo" className="w-full h-20 object-cover" style={{ borderRadius: 'var(--radius-sm)' }} loading="lazy" />
+                  ))}
+                </div>
+              )}
               <p className="font-medium line-clamp-2">{memory.summary}</p>
               <div className="flex flex-wrap gap-1 mt-2">
                 {memory.people.map(p => (
