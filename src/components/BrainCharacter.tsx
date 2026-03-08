@@ -11,7 +11,7 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
   useEffect(() => {
     const blink = () => {
       setBlinking(true);
-      setTimeout(() => setBlinking(false), 140);
+      setTimeout(() => setBlinking(false), 150);
     };
     const interval = setInterval(() => {
       blink();
@@ -23,82 +23,124 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
   return (
     <div className="flex flex-col items-center gap-3 py-6">
       <div className="brain-sway" aria-hidden="true">
-        <svg width="160" height="150" viewBox="0 0 160 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="180" height="180" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
 
-          {/* === BRAIN SHAPE === */}
-          {/* Main brain blob — two hemispheres merged */}
-          {/* Left hemisphere */}
-          <path
-            d="M80 30 C60 12, 24 18, 18 42 C12 62, 18 78, 28 90 C22 100, 24 114, 36 122 C44 130, 58 132, 72 128 L80 126"
-            fill="hsl(340 65% 82%)"
-          />
-          {/* Right hemisphere */}
-          <path
-            d="M80 30 C100 12, 136 18, 142 42 C148 62, 142 78, 132 90 C138 100, 136 114, 124 122 C116 130, 102 132, 88 128 L80 126"
-            fill="hsl(340 62% 80%)"
-          />
-          {/* Center overlap blend */}
-          <ellipse cx="80" cy="80" rx="16" ry="48" fill="hsl(340 64% 81%)" />
+          {/* === BRAIN SHAPE — bumpy cloud-like lobes === */}
+          {/* Bottom center lobe */}
+          <ellipse cx="100" cy="120" rx="38" ry="22" fill="hsl(12 60% 76%)" />
+          {/* Left bottom lobe */}
+          <ellipse cx="62" cy="110" rx="28" ry="24" fill="hsl(12 60% 76%)" />
+          {/* Right bottom lobe */}
+          <ellipse cx="138" cy="110" rx="28" ry="24" fill="hsl(12 60% 76%)" />
+          {/* Left middle lobe */}
+          <ellipse cx="48" cy="85" rx="26" ry="26" fill="hsl(12 58% 78%)" />
+          {/* Right middle lobe */}
+          <ellipse cx="152" cy="85" rx="26" ry="26" fill="hsl(12 58% 78%)" />
+          {/* Left top lobe */}
+          <ellipse cx="62" cy="58" rx="28" ry="24" fill="hsl(12 55% 80%)" />
+          {/* Right top lobe */}
+          <ellipse cx="138" cy="58" rx="28" ry="24" fill="hsl(12 55% 80%)" />
+          {/* Top center lobe */}
+          <ellipse cx="100" cy="46" rx="30" ry="22" fill="hsl(12 55% 80%)" />
+          {/* Center fill */}
+          <ellipse cx="100" cy="82" rx="44" ry="40" fill="hsl(12 58% 78%)" />
 
-          {/* Brain folds — left side */}
-          <path d="M34 48 C44 40, 58 42, 66 52" stroke="hsl(340 48% 72%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <path d="M26 66 C36 58, 52 56, 62 66" stroke="hsl(340 48% 72%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <path d="M28 86 C38 78, 50 78, 58 84" stroke="hsl(340 48% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M36 104 C44 96, 56 96, 64 102" stroke="hsl(340 48% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-
-          {/* Brain folds — right side */}
-          <path d="M126 48 C116 40, 102 42, 94 52" stroke="hsl(340 48% 72%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <path d="M134 66 C124 58, 108 56, 98 66" stroke="hsl(340 48% 72%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <path d="M132 86 C122 78, 110 78, 102 84" stroke="hsl(340 48% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M124 104 C116 96, 104 96, 96 102" stroke="hsl(340 48% 72%)" strokeWidth="2" strokeLinecap="round" fill="none" />
-
-          {/* Center dividing line */}
-          <path d="M80 24 V68" stroke="hsl(340 48% 72%)" strokeWidth="2.5" strokeLinecap="round" />
-
-          {/* Top highlight / shine */}
-          <ellipse cx="60" cy="36" rx="18" ry="10" fill="hsl(340 72% 90%)" opacity="0.5" />
-          <ellipse cx="56" cy="33" rx="8" ry="4" fill="white" opacity="0.2" />
+          {/* === BRAIN FOLDS (curved lines) === */}
+          {/* Center vertical line */}
+          <path d="M100 42 V78" stroke="hsl(12 45% 68%)" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Left folds */}
+          <path d="M58 52 C68 46, 82 48, 92 58" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M44 76 C56 68, 72 68, 84 78" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M50 100 C62 92, 74 92, 86 98" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          {/* Right folds */}
+          <path d="M142 52 C132 46, 118 48, 108 58" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M156 76 C144 68, 128 68, 116 78" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M150 100 C138 92, 126 92, 114 98" stroke="hsl(12 45% 68%)" strokeWidth="2" strokeLinecap="round" fill="none" />
 
           {/* === FACE === */}
           {/* Eyes */}
           <g style={{
             transform: `scaleY(${blinking ? 0.05 : 1})`,
-            transformOrigin: '58px 82px',
+            transformOrigin: '76px 88px',
             transition: 'transform 0.1s ease-in-out'
           }}>
-            <ellipse cx="58" cy="82" rx="9" ry="10" fill="white" />
-            <circle cx="60" cy="84" r="5.5" fill="hsl(232 50% 32%)" />
-            <circle cx="62" cy="81" r="2.5" fill="white" />
-            <circle cx="58" cy="87" r="1.2" fill="white" opacity="0.6" />
+            {/* Left eye white */}
+            <ellipse cx="76" cy="88" rx="12" ry="13" fill="white" />
+            {/* Left iris */}
+            <circle cx="78" cy="90" r="7" fill="hsl(225 45% 28%)" />
+            {/* Left pupil */}
+            <circle cx="78" cy="90" r="4.5" fill="hsl(225 50% 18%)" />
+            {/* Left eye shine */}
+            <circle cx="82" cy="86" r="3" fill="white" />
+            <circle cx="76" cy="93" r="1.5" fill="white" opacity="0.5" />
           </g>
           <g style={{
             transform: `scaleY(${blinking ? 0.05 : 1})`,
-            transformOrigin: '102px 82px',
+            transformOrigin: '124px 88px',
             transition: 'transform 0.1s ease-in-out'
           }}>
-            <ellipse cx="102" cy="82" rx="9" ry="10" fill="white" />
-            <circle cx="104" cy="84" r="5.5" fill="hsl(232 50% 32%)" />
-            <circle cx="106" cy="81" r="2.5" fill="white" />
-            <circle cx="102" cy="87" r="1.2" fill="white" opacity="0.6" />
+            {/* Right eye white */}
+            <ellipse cx="124" cy="88" rx="12" ry="13" fill="white" />
+            {/* Right iris */}
+            <circle cx="126" cy="90" r="7" fill="hsl(225 45% 28%)" />
+            {/* Right pupil */}
+            <circle cx="126" cy="90" r="4.5" fill="hsl(225 50% 18%)" />
+            {/* Right eye shine */}
+            <circle cx="130" cy="86" r="3" fill="white" />
+            <circle cx="124" cy="93" r="1.5" fill="white" opacity="0.5" />
           </g>
 
-          {/* Rosy cheeks */}
-          <ellipse cx="42" cy="96" rx="8" ry="5" fill="hsl(350 85% 78%)" opacity="0.35" />
-          <ellipse cx="118" cy="96" rx="8" ry="5" fill="hsl(350 85% 78%)" opacity="0.35" />
+          {/* Eyebrows — gentle arcs */}
+          <path d="M64 74 C70 68, 82 68, 88 74" stroke="hsl(225 35% 30%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M112 74 C118 68, 130 68, 136 74" stroke="hsl(225 35% 30%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
-          {/* Tiny nose */}
-          <ellipse cx="80" cy="94" rx="2.5" ry="2" fill="hsl(350 65% 72%)" />
+          {/* Rosy cheek dots */}
+          <ellipse cx="58" cy="104" rx="8" ry="5" fill="hsl(0 70% 72%)" opacity="0.45" />
+          <ellipse cx="142" cy="104" rx="8" ry="5" fill="hsl(0 70% 72%)" opacity="0.45" />
 
-          {/* Happy smile — w shape (cat mouth) */}
-          <path d="M70 102 C74 108, 78 109, 80 104" stroke="hsl(340 40% 50%)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-          <path d="M90 102 C86 108, 82 109, 80 104" stroke="hsl(340 40% 50%)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+          {/* Cute smile */}
+          <path d="M88 108 C94 116, 106 116, 112 108" stroke="hsl(12 40% 45%)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
 
-          {/* Sparkles */}
-          <g opacity="0.6">
-            <path d="M142 28L144 22L146 28L152 30L146 32L144 38L142 32L136 30Z" fill="hsl(45 90% 68%)" />
-            <path d="M14 44L16 40L18 44L22 46L18 48L16 52L14 48L10 46Z" fill="hsl(45 90% 68%)" />
-            <circle cx="148" cy="50" r="1.5" fill="hsl(45 85% 70%)" opacity="0.5" />
+          {/* === LEGS === */}
+          {/* Left leg */}
+          <rect x="78" y="132" width="8" height="22" rx="4" fill="hsl(12 50% 62%)" />
+          {/* Right leg */}
+          <rect x="114" y="132" width="8" height="22" rx="4" fill="hsl(12 50% 62%)" />
+          {/* Left foot */}
+          <ellipse cx="80" cy="155" rx="8" ry="5" fill="hsl(12 50% 58%)" />
+          {/* Right foot */}
+          <ellipse cx="120" cy="155" rx="8" ry="5" fill="hsl(12 50% 58%)" />
+
+          {/* === RIGHT ARM raised with lightbulb === */}
+          {/* Arm */}
+          <path d="M156 95 C162 88, 166 74, 160 60" stroke="hsl(12 50% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
+          {/* Hand / pointer finger */}
+          <circle cx="160" cy="58" r="4" fill="hsl(12 50% 62%)" />
+
+          {/* Lightbulb */}
+          <g>
+            {/* Bulb glow */}
+            <circle cx="164" cy="38" r="18" fill="hsl(45 90% 70%)" opacity="0.2" />
+            {/* Bulb */}
+            <circle cx="164" cy="38" r="12" fill="hsl(45 90% 65%)" />
+            {/* Bulb highlight */}
+            <circle cx="160" cy="34" r="4" fill="hsl(45 95% 80%)" opacity="0.6" />
+            {/* Bulb base */}
+            <rect x="159" y="48" width="10" height="6" rx="2" fill="hsl(230 10% 60%)" />
+            {/* Filament */}
+            <path d="M162 36 C163 32, 165 32, 166 36" stroke="hsl(230 10% 50%)" strokeWidth="1.2" fill="none" />
+            {/* Rays */}
+            <line x1="164" y1="20" x2="164" y2="16" stroke="hsl(45 85% 60%)" strokeWidth="2" strokeLinecap="round" />
+            <line x1="176" y1="26" x2="180" y2="22" stroke="hsl(45 85% 60%)" strokeWidth="2" strokeLinecap="round" />
+            <line x1="152" y1="26" x2="148" y2="22" stroke="hsl(45 85% 60%)" strokeWidth="2" strokeLinecap="round" />
+            <line x1="180" y1="38" x2="184" y2="38" stroke="hsl(45 85% 60%)" strokeWidth="2" strokeLinecap="round" />
+            <line x1="148" y1="38" x2="144" y2="38" stroke="hsl(45 85% 60%)" strokeWidth="2" strokeLinecap="round" />
           </g>
+
+          {/* === LEFT ARM (resting) === */}
+          <path d="M44 100 C36 108, 34 118, 38 124" stroke="hsl(12 50% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
+          <circle cx="38" cy="126" r="4" fill="hsl(12 50% 62%)" />
+
         </svg>
       </div>
       <div className="text-center">
