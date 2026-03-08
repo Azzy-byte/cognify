@@ -279,6 +279,11 @@ const MedicationsPage = () => {
 
   const commitEditMed = () => {
     if (!editingMed) return;
+    const original = medications.find(m => m.id === editingMed);
+    const changes: string[] = [];
+    if (original && original.name !== editMedName.trim()) changes.push(`name: ${original.name} → ${editMedName.trim()}`);
+    if (original && original.dosage !== editMedDosage.trim()) changes.push(`dosage: ${original.dosage} → ${editMedDosage.trim()}`);
+
     updateMedication(editingMed, {
       name: editMedName.trim(),
       dosage: editMedDosage.trim(),
@@ -290,6 +295,9 @@ const MedicationsPage = () => {
       action_type: 'medication_updated', target_type: 'medication', target_id: editingMed,
       new_value: { name: editMedName, dosage: editMedDosage },
     });
+    if (changes.length > 0) {
+      notifyCaretaker('Medication changed', editMedName.trim(), changes.join(', '));
+    }
     setEditingMed(null);
     setDoseWarning(null);
     setPendingAlerts(null);
