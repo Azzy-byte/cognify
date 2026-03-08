@@ -269,17 +269,17 @@ const CameraPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <GlassCard className="overflow-hidden aspect-[4/3] flex items-center justify-center bg-foreground/5">
-            {streaming ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover bg-muted"
-                style={{ borderRadius: 'var(--radius-md)' }}
-              />
-            ) : (
+          <GlassCard className="overflow-hidden aspect-[4/3] flex items-center justify-center bg-foreground/5 relative">
+            {/* Always render video so ref is available */}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover bg-muted ${streaming ? 'block' : 'hidden'}`}
+              style={{ borderRadius: 'var(--radius-md)' }}
+            />
+            {!streaming && (
               <div className="text-center p-8">
                 <Camera size={48} className="text-muted-foreground mx-auto mb-4" />
                 {error ? (
