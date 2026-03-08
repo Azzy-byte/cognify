@@ -48,7 +48,7 @@ const CameraPage = () => {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
   const [memoryHashesByPerson, setMemoryHashesByPerson] = useState<Record<string, string[]>>({});
-  const [derivedMemoryPeople, setDerivedMemoryPeople] = useState<Array<{ id: string; name: string; relationship: string; photo_hashes: string[] }>>([]);
+  const [derivedMemoryPeople, setDerivedMemoryPeople] = useState<DerivedMemoryPerson[]>([]);
   const [hashingMemoryPhotos, setHashingMemoryPhotos] = useState(false);
 
   useEffect(() => {
