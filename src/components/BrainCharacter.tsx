@@ -147,7 +147,7 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
         <h2 className="text-xl font-semibold mb-1 text-foreground">
           {greeting || `Hello${userName ? `, ${userName}` : ''} 👋`}
         </h2>
-        <p className="text-muted-foreground">I'm Cognify, your AI companion. Ask me anything!</p>
+        <p className="text-muted-foreground">I'm Cognify, your cognitive twin. Ask me anything!</p>
       </div>
     </div>
   );
