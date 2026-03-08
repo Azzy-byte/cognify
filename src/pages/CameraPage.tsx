@@ -4,6 +4,33 @@ import GlassCard from '@/components/GlassCard';
 import { Camera, RotateCcw, User, Check, Trash2, X } from 'lucide-react';
 import { generatePerceptualHash, findMatch, type MatchResult } from '@/lib/phash';
 
+type DerivedMemoryPerson = { id: string; name: string; relationship: string; photo_hashes: string[] };
+
+const STOP_WORD_NAMES = new Set([
+  'I', 'Im', 'My', 'Me', 'We', 'You', 'He', 'She', 'They', 'It',
+  'Today', 'Yesterday', 'Tomorrow', 'Morning', 'Evening', 'Night',
+  'The', 'A', 'An', 'And', 'But', 'With', 'From', 'For', 'At', 'In', 'On',
+]);
+
+const extractCandidateNames = (text: string) => {
+  const matches = text.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?\b/g) ?? [];
+  return [...new Set(matches.filter(name => !STOP_WORD_NAMES.has(name)))].slice(0, 6);
+};
+
+const getMemoryNames = (memory: { people: string[]; summary: string; conversation: Array<{ role: string; text: string }> }) => {
+  if (memory.people.length > 0) {
+    return [...new Set(memory.people.map(p => p.trim()).filter(Boolean))];
+  }
+
+  const conversationText = memory.conversation
+    .filter(msg => msg.role === 'user')
+    .map(msg => msg.text)
+    .join(' ');
+
+  const inferred = extractCandidateNames(`${memory.summary} ${conversationText}`);
+  return inferred;
+};
+
 const CameraPage = () => {
   const { people, memories, addPerson, updatePerson, deletePerson, addAuditEntry, currentUser } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
