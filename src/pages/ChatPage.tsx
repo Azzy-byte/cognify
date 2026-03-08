@@ -50,6 +50,12 @@ const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
               />
             ))}
           </div>
+        {msg.audio_urls && msg.audio_urls.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {msg.audio_urls.map((url, j) => (
+              <audio key={j} src={url} controls className="w-full h-8" />
+            ))}
+          </div>
         )}
       </div>
     </div>
