@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { Camera, RotateCcw, User, Check, X } from 'lucide-react';
@@ -7,6 +7,7 @@ import { generatePerceptualHash, findMatch, type MatchResult } from '@/lib/phash
 const CameraPage = () => {
   const { people, addPerson, updatePerson, addAuditEntry, currentUser } = useApp();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
@@ -15,18 +16,36 @@ const CameraPage = () => {
   const [relationship, setRelationship] = useState('');
   const [tagged, setTagged] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        streamRef.current = stream;
         setStreaming(true);
+        setError(null);
       }
     } catch {
-      alert('Camera access is needed to take photos. Please allow camera access and try again.');
+      setError('Camera access denied. Please enable camera permissions in your browser settings.');
     }
   }, []);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setStreaming(false);
+  }, []);
+
+  useEffect(() => {
+    startCamera();
+    return () => stopCamera();
+  }, [startCamera, stopCamera]);
 
   const capture = useCallback(async () => {
     if (!videoRef.current) return;
@@ -34,13 +53,9 @@ const CameraPage = () => {
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg');
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
     setPhoto(dataUrl);
-
-    // Stop camera
-    const stream = videoRef.current.srcObject as MediaStream;
-    stream?.getTracks().forEach(t => t.stop());
-    setStreaming(false);
+    stopCamera();
 
     // Auto-recognize
     setAnalyzing(true);
@@ -56,7 +71,7 @@ const CameraPage = () => {
       setMatchResult({ recognized: false });
     }
     setAnalyzing(false);
-  }, [people]);
+  }, [people, stopCamera]);
 
   const confirmMatch = async () => {
     if (!matchResult?.personId || !photo) return;
@@ -120,6 +135,8 @@ const CameraPage = () => {
     setRelationship('');
     setTagged(null);
     setAnalyzing(false);
+    setError(null);
+    startCamera();
   };
 
   return (
@@ -146,12 +163,11 @@ const CameraPage = () => {
 
           {analyzing && (
             <GlassCard className="p-6 text-center animate-fade-in">
-              <div className="w-8 h-8 border-2 border-lavender border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <div className="w-8 h-8 border-2 border-soft-pink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
               <p className="text-muted-foreground">Analyzing photo...</p>
             </GlassCard>
           )}
 
-          {/* Auto-recognized */}
           {matchResult?.recognized && !tagged && (
             <GlassCard className="p-4 animate-fade-in">
               <h3 className="font-semibold mb-3">
@@ -167,17 +183,12 @@ const CameraPage = () => {
             </GlassCard>
           )}
 
-          {/* New person form */}
           {showForm && (
             <GlassCard className="p-4 animate-fade-in">
               <h3 className="font-semibold mb-3">I don't recognize this person yet</h3>
               <div className="space-y-3">
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" className="input-glass w-full" />
-                <select
-                  value={relationship}
-                  onChange={e => setRelationship(e.target.value)}
-                  className="input-glass w-full"
-                >
+                <select value={relationship} onChange={e => setRelationship(e.target.value)} className="input-glass w-full">
                   <option value="">Select relationship</option>
                   <option value="Daughter">Daughter</option>
                   <option value="Son">Son</option>
@@ -197,23 +208,25 @@ const CameraPage = () => {
       ) : (
         <div className="space-y-4">
           <GlassCard className="overflow-hidden aspect-[4/3] flex items-center justify-center bg-foreground/5">
-            {streaming ? (
+            {error ? (
+              <div className="text-center p-8">
+                <Camera size={48} className="text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <button onClick={startCamera} className="btn-primary min-h-[48px]">Try Again</button>
+              </div>
+            ) : streaming ? (
               <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" style={{ borderRadius: 'var(--radius-md)' }} />
             ) : (
               <div className="text-center p-8">
-                <Camera size={48} className="text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Camera preview will appear here</p>
+                <div className="w-8 h-8 border-2 border-soft-pink border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-muted-foreground">Starting camera...</p>
               </div>
             )}
           </GlassCard>
 
-          {streaming ? (
+          {streaming && (
             <button onClick={capture} className="btn-pink w-full flex items-center justify-center gap-2 min-h-[48px]">
               <Camera size={20} /> Capture Photo
-            </button>
-          ) : (
-            <button onClick={startCamera} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]">
-              <Camera size={20} /> Start Camera
             </button>
           )}
 
@@ -223,11 +236,11 @@ const CameraPage = () => {
               <div className="space-y-2">
                 {people.map(p => (
                   <div key={p.id} className="flex items-center gap-3 p-2">
-                    <div className="w-10 h-10 rounded-full bg-lavender/20 flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-soft-pink/20 flex items-center justify-center overflow-hidden">
                       {p.photo_urls.length > 0 ? (
                         <img src={p.photo_urls[0]} alt={p.name} className="w-10 h-10 rounded-full object-cover" loading="lazy" />
                       ) : (
-                        <User size={16} className="text-lavender" />
+                        <User size={16} className="text-soft-pink" />
                       )}
                     </div>
                     <div>

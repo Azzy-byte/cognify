@@ -68,7 +68,7 @@ const FamilyPage = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <GlassCard className="p-3 text-center">
-          <p className="text-2xl font-bold text-lavender">{memories.length}</p>
+          <p className="text-2xl font-bold text-soft-pink">{memories.length}</p>
           <p className="text-xs text-muted-foreground">Memories</p>
         </GlassCard>
         <GlassCard className="p-3 text-center">
@@ -91,7 +91,7 @@ const FamilyPage = () => {
               <GlassCard key={fm.id} className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-lavender/20 flex items-center justify-center font-bold text-lavender">
+                    <div className="w-10 h-10 rounded-full bg-soft-pink/20 flex items-center justify-center font-bold text-soft-pink">
                       {user?.name?.[0] || '?'}
                     </div>
                     <div>
@@ -108,7 +108,7 @@ const FamilyPage = () => {
                 {currentUser.role === 'patient' && (
                   <div className="mt-3 pt-3 border-t border-border">
                     <button onClick={() => setEditingPerms(editingPerms === fm.id ? null : fm.id)}
-                      className="text-sm text-lavender flex items-center gap-1 min-h-[44px]">
+                      className="text-sm text-soft-pink flex items-center gap-1 min-h-[44px]">
                       Edit Permissions <ChevronRight size={14} className={`transition-transform ${editingPerms === fm.id ? 'rotate-90' : ''}`} />
                     </button>
                     {editingPerms === fm.id && (
@@ -138,7 +138,7 @@ const FamilyPage = () => {
       {/* Contacts */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold flex items-center gap-2"><Phone size={20} /> Contacts</h2>
-        <button onClick={() => setShowAddContact(!showAddContact)} className="p-3 rounded-full bg-lavender/20 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={showAddContact ? 'Close' : 'Add contact'}>
+        <button onClick={() => setShowAddContact(!showAddContact)} className="p-3 rounded-full bg-soft-pink/20 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={showAddContact ? 'Close' : 'Add contact'}>
           {showAddContact ? <X size={20} /> : <Plus size={20} />}
         </button>
       </div>
@@ -191,7 +191,7 @@ const FamilyPage = () => {
       <div className="mb-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold flex items-center gap-2"><Clock size={20} /> Recent Activity</h2>
-          <button onClick={() => navigate('/audit')} className="text-sm text-lavender min-h-[44px] flex items-center">View All</button>
+          <button onClick={() => navigate('/audit')} className="text-sm text-soft-pink min-h-[44px] flex items-center">View All</button>
         </div>
         <div className="space-y-2">
           {recentAudit.map(entry => (

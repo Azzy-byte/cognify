@@ -50,6 +50,7 @@ const MapPage = () => {
 
   const startTracking = useCallback(() => {
     if (!navigator.geolocation) return;
+    if ('Notification' in window) Notification.requestPermission();
     const id = navigator.geolocation.watchPosition(
       pos => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -58,12 +59,23 @@ const MapPage = () => {
           user_id: currentUser.id, lat: loc.lat, lng: loc.lng,
           accuracy: pos.coords.accuracy, timestamp: new Date().toISOString(),
         });
+        // Lost detection
         const hour = new Date().getHours();
         const isNight = hour >= 20 || hour < 6;
         if (isNight) {
-          const inZone = safeZones.some(z => getDistance(loc.lat, loc.lng, z.lat, z.lng) <= z.radius_meters);
-          if (!inZone && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('Are you lost?', { body: "You're outside your safe zones at night. Tap for help." });
+          let inZone = false;
+          let closestZone = safeZones[0];
+          let minDist = Infinity;
+          for (const z of safeZones) {
+            const d = getDistance(loc.lat, loc.lng, z.lat, z.lng);
+            if (d < minDist) { minDist = d; closestZone = z; }
+            if (d <= z.radius_meters) { inZone = true; break; }
+          }
+          if (!inZone && minDist > 500 && 'Notification' in window && Notification.permission === 'granted') {
+            const distKm = (minDist / 1000).toFixed(1);
+            new Notification('Are you lost?', {
+              body: `You are ${distKm}km from ${closestZone?.name || 'your safe zone'}. Need help?`,
+            });
           }
         }
       },
@@ -115,12 +127,12 @@ const MapPage = () => {
             </Marker>
             {safeZones.map(z => (
               <Circle key={z.id} center={[z.lat, z.lng]} radius={z.radius_meters}
-                pathOptions={{ color: '#B8F5D8', fillColor: '#B8F5D8', fillOpacity: 0.2 }}>
+                pathOptions={{ color: '#A8E6CF', fillColor: '#A8E6CF', fillOpacity: 0.2 }}>
                 <Popup>{z.name}</Popup>
               </Circle>
             ))}
             {recentLocations.length > 1 && (
-              <Polyline positions={recentLocations} pathOptions={{ color: '#B8D8F5', weight: 3, opacity: 0.7 }} />
+              <Polyline positions={recentLocations} pathOptions={{ color: '#A8D8EA', weight: 3, opacity: 0.7 }} />
             )}
           </MapContainer>
         </GlassCard>
@@ -141,7 +153,7 @@ const MapPage = () => {
       {tracking && (
         <GlassCard className="p-3 mb-4 flex items-center gap-2 animate-fade-in">
           <div className="w-3 h-3 rounded-full bg-mint animate-pulse" />
-          <span className="text-sm">Tracking active · {locations.length} points recorded</span>
+          <span className="text-sm">Tracking active - {locations.length} points recorded</span>
         </GlassCard>
       )}
 
