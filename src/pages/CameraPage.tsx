@@ -238,17 +238,22 @@ const CameraPage = () => {
       const hasAnyHashes = extendedPeople.some(p => (p.photo_hashes?.length || 0) > 0);
       if (!hasAnyHashes && memories.length > 0) {
         const derivedByName = new Map<string, DerivedMemoryPerson>();
+        const allMemoryImageUrls = [...new Set(memories.flatMap((memory) => memory.image_urls))].slice(0, 160);
+        const allHashResults = await Promise.allSettled(allMemoryImageUrls.map((url) => generatePerceptualHash(url)));
+        const hashByUrl = new Map<string, string>();
+
+        allHashResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') hashByUrl.set(allMemoryImageUrls[index], result.value);
+        });
+
+        const allMemoryHashes = Array.from(hashByUrl.values());
+
         for (const memory of memories) {
           if (!memory.image_urls.length) continue;
           const memoryNames = getMemoryNames(memory);
           if (!memoryNames.length) continue;
 
-          const hashResults = await Promise.allSettled(
-            [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
-          );
-          const memoryHashes = hashResults
-            .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-            .map(result => result.value);
+          const memoryHashes = [...new Set(memory.image_urls.map((url) => hashByUrl.get(url)).filter(Boolean) as string[])].slice(0, 12);
 
           for (const rawName of memoryNames) {
             const trimmedName = rawName.trim();
@@ -267,10 +272,15 @@ const CameraPage = () => {
         const knownNames = new Set(people.map(p => p.name.toLowerCase()));
         const memoryOnlyPeople = Array.from(derivedByName.values()).filter(p => !knownNames.has(p.name.toLowerCase()));
         extendedPeople = [
-          ...people.map(person => ({
-            ...person,
-            photo_hashes: [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])],
-          })),
+          ...people.map(person => {
+            const baseHashes = [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])];
+            const visuallyLinkedMemoryHashes = getVisualNeighborHashes(baseHashes, allMemoryHashes, 0.34);
+
+            return {
+              ...person,
+              photo_hashes: [...new Set([...baseHashes, ...visuallyLinkedMemoryHashes])],
+            };
+          }),
           ...memoryOnlyPeople,
         ];
       }
