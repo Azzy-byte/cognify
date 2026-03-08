@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Plus, Pill, Clock, Trash2, Check, Bell, X, Calendar, Pencil, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Plus, Pill, Clock, Trash2, Check, Bell, X, Calendar, Pencil, AlertTriangle, ShieldAlert, Package } from 'lucide-react';
 import { checkInteractions, checkDuplicates, checkDoseChange, type InteractionAlert, type DuplicateAlert } from '@/lib/medicationInteractions';
 
 const InteractionWarning = ({
