@@ -233,6 +233,17 @@
   transform-origin: center;
 }
 
+@keyframes brain-sway {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(1.5deg) translateY(-3px); }
+  75% { transform: rotate(-1.5deg) translateY(-2px); }
+}
+
+.brain-sway {
+  animation: brain-sway 4s ease-in-out infinite, brain-breathe 3s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
 @keyframes chat-slide-up {
   0% { opacity: 0; transform: translateY(12px); }
   100% { opacity: 1; transform: translateY(0); }
