@@ -18,6 +18,7 @@ export interface Memory {
   summary: string;
   image_urls: string[];
   audio_url?: string;
+  audio_urls?: string[];
   transcription?: string;
   people: string[];
   category: 'family' | 'social' | 'health' | 'general';
