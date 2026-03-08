@@ -27,23 +27,23 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
 
           {/* === BRAIN SHAPE — bumpy cloud-like lobes === */}
           {/* Bottom center lobe */}
-          <ellipse cx="100" cy="120" rx="38" ry="22" fill="hsl(12 60% 76%)" />
+          <ellipse cx="100" cy="120" rx="38" ry="22" fill="hsl(340 62% 80%)" />
           {/* Left bottom lobe */}
-          <ellipse cx="62" cy="110" rx="28" ry="24" fill="hsl(12 60% 76%)" />
+          <ellipse cx="62" cy="110" rx="28" ry="24" fill="hsl(340 62% 80%)" />
           {/* Right bottom lobe */}
-          <ellipse cx="138" cy="110" rx="28" ry="24" fill="hsl(12 60% 76%)" />
+          <ellipse cx="138" cy="110" rx="28" ry="24" fill="hsl(340 62% 80%)" />
           {/* Left middle lobe */}
-          <ellipse cx="48" cy="85" rx="26" ry="26" fill="hsl(12 58% 78%)" />
+          <ellipse cx="48" cy="85" rx="26" ry="26" fill="hsl(340 60% 82%)" />
           {/* Right middle lobe */}
-          <ellipse cx="152" cy="85" rx="26" ry="26" fill="hsl(12 58% 78%)" />
+          <ellipse cx="152" cy="85" rx="26" ry="26" fill="hsl(340 60% 82%)" />
           {/* Left top lobe */}
-          <ellipse cx="62" cy="58" rx="28" ry="24" fill="hsl(12 55% 80%)" />
+          <ellipse cx="62" cy="58" rx="28" ry="24" fill="hsl(340 58% 84%)" />
           {/* Right top lobe */}
-          <ellipse cx="138" cy="58" rx="28" ry="24" fill="hsl(12 55% 80%)" />
+          <ellipse cx="138" cy="58" rx="28" ry="24" fill="hsl(340 58% 84%)" />
           {/* Top center lobe */}
-          <ellipse cx="100" cy="46" rx="30" ry="22" fill="hsl(12 55% 80%)" />
+          <ellipse cx="100" cy="46" rx="30" ry="22" fill="hsl(340 58% 84%)" />
           {/* Center fill */}
-          <ellipse cx="100" cy="82" rx="44" ry="40" fill="hsl(12 58% 78%)" />
+          <ellipse cx="100" cy="82" rx="44" ry="40" fill="hsl(340 60% 82%)" />
 
           {/* === BRAIN FOLDS (curved lines) === */}
           {/* Center vertical line */}
