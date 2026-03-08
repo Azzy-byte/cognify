@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageCircle, BookOpen, Camera, Bell, Users, MapPin } from 'lucide-react';
+import { MessageCircle, BookOpen, Camera, Bell, Users, User } from 'lucide-react';
 
 const tabs = [
   { path: '/', icon: MessageCircle, label: 'Chat' },
@@ -7,7 +7,7 @@ const tabs = [
   { path: '/camera', icon: Camera, label: 'Camera' },
   { path: '/reminders', icon: Bell, label: 'Reminders' },
   { path: '/family', icon: Users, label: 'Family' },
-  { path: '/map', icon: MapPin, label: 'Map' },
+  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 const Navigation = () => {

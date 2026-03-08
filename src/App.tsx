@@ -18,6 +18,7 @@ const CameraPage = lazy(() => import('@/pages/CameraPage'));
 const MedicationsPage = lazy(() => import('@/pages/MedicationsPage'));
 const FamilyPage = lazy(() => import('@/pages/FamilyPage'));
 const MapPage = lazy(() => import('@/pages/MapPage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const AuditLogPage = lazy(() => import('@/pages/AuditLogPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -49,6 +50,7 @@ const App = () => (
                   <Route path="/reminders" element={<MedicationsPage />} />
                   <Route path="/family" element={<FamilyPage />} />
                   <Route path="/map" element={<MapPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/audit" element={<AuditLogPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>

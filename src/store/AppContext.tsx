@@ -6,7 +6,6 @@ const STORAGE_KEY = 'cognify_data';
 
 function defaultData(): AppState {
   const userId = 'user-primary';
-
   return {
     currentUser: { id: userId, name: '', email: '', role: 'patient', created_at: new Date().toISOString() },
     users: [
@@ -30,14 +29,11 @@ function loadState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-
       const isLegacyDemo =
         parsed?.currentUser?.email === 'margaret@example.com' ||
         parsed?.users?.some?.((u: { email?: string }) => u.email === 'margaret@example.com');
-
       if (isLegacyDemo) return defaultData();
 
-      // Migrate: ensure photo_hashes exists on all people
       if (parsed.people) {
         parsed.people = parsed.people.map((p: Person) => ({
           ...p,
@@ -52,13 +48,17 @@ function loadState(): AppState {
 
 interface AppContextType extends AppState {
   addMemory: (m: Omit<Memory, 'id' | 'created_at'>) => void;
+  updateMemory: (id: string, updates: Partial<Memory>) => void;
+  deleteMemory: (id: string) => void;
   addPerson: (p: Omit<Person, 'id' | 'created_at'>) => void;
   updatePerson: (id: string, updates: Partial<Person>) => void;
+  deletePerson: (id: string) => void;
   addMedication: (m: Omit<Medication, 'id' | 'created_at'>) => void;
   updateMedication: (id: string, updates: Partial<Medication>) => void;
   deleteMedication: (id: string) => void;
   addReminder: (r: Omit<Reminder, 'id' | 'created_at'>) => void;
   updateReminder: (id: string, updates: Partial<Reminder>) => void;
+  deleteReminder: (id: string) => void;
   addLocation: (l: Omit<Location, 'id'>) => void;
   addSafeZone: (z: Omit<SafeZone, 'id' | 'created_at'>) => void;
   updateSafeZone: (id: string, updates: Partial<SafeZone>) => void;
@@ -104,13 +104,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
     }),
     addMemory: (m) => update(s => ({ ...s, memories: [{ ...m, id: uuid(), created_at: new Date().toISOString() }, ...s.memories] })),
+    updateMemory: (id, u) => update(s => ({ ...s, memories: s.memories.map(m => m.id === id ? { ...m, ...u, updated_at: new Date().toISOString() } : m) })),
+    deleteMemory: (id) => update(s => ({ ...s, memories: s.memories.filter(m => m.id !== id) })),
     addPerson: (p) => update(s => ({ ...s, people: [...s.people, { ...p, id: uuid(), created_at: new Date().toISOString() }] })),
     updatePerson: (id, u) => update(s => ({ ...s, people: s.people.map(p => p.id === id ? { ...p, ...u } : p) })),
+    deletePerson: (id) => update(s => ({ ...s, people: s.people.filter(p => p.id !== id) })),
     addMedication: (m) => update(s => ({ ...s, medications: [...s.medications, { ...m, id: uuid(), created_at: new Date().toISOString() }] })),
     updateMedication: (id, u) => update(s => ({ ...s, medications: s.medications.map(m => m.id === id ? { ...m, ...u } : m) })),
     deleteMedication: (id) => update(s => ({ ...s, medications: s.medications.filter(m => m.id !== id) })),
     addReminder: (r) => update(s => ({ ...s, reminders: [...s.reminders, { ...r, id: uuid(), created_at: new Date().toISOString() }] })),
     updateReminder: (id, u) => update(s => ({ ...s, reminders: s.reminders.map(r => r.id === id ? { ...r, ...u } : r) })),
+    deleteReminder: (id) => update(s => ({ ...s, reminders: s.reminders.filter(r => r.id !== id) })),
     addLocation: (l) => update(s => ({ ...s, locations: [...s.locations.slice(-100), { ...l, id: uuid() }] })),
     addSafeZone: (z) => update(s => ({ ...s, safeZones: [...s.safeZones, { ...z, id: uuid(), created_at: new Date().toISOString() }] })),
     updateSafeZone: (id, u) => update(s => ({ ...s, safeZones: s.safeZones.map(z => z.id === id ? { ...z, ...u } : z) })),
