@@ -49,7 +49,7 @@
   }
   body {
     @apply text-foreground;
-    background: transparent;
+    background: transparent !important;
     font-size: 18px;
     line-height: 1.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -185,7 +185,7 @@
 }
 
 .orb {
-  position: fixed;
+  position: absolute;
   border-radius: 50%;
   filter: blur(120px);
   pointer-events: none;

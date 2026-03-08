@@ -17,17 +17,26 @@ const CameraPage = () => {
   const [tagged, setTagged] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
-  // Called directly from button click (user gesture required)
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (facing?: 'user' | 'environment') => {
+    // Stop any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+
+    const mode = facing || facingMode;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setStreaming(true);
+        setFacingMode(mode);
         setError(null);
       }
     } catch (err) {
@@ -37,7 +46,12 @@ const CameraPage = () => {
         setError('Could not access camera. Please make sure your device has a camera and try again.');
       }
     }
-  }, []);
+  }, [facingMode]);
+
+  const flipCamera = useCallback(() => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    startCamera(newMode);
+  }, [facingMode, startCamera]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -221,11 +235,16 @@ const CameraPage = () => {
           </GlassCard>
 
           {streaming ? (
-            <button onClick={capture} className="btn-pink w-full flex items-center justify-center gap-2 min-h-[48px]">
-              <Camera size={20} /> Capture Photo
-            </button>
+            <div className="flex gap-2">
+              <button onClick={capture} className="btn-pink flex-1 flex items-center justify-center gap-2 min-h-[48px]">
+                <Camera size={20} /> Capture Photo
+              </button>
+              <button onClick={flipCamera} className="btn-primary flex items-center justify-center gap-2 min-h-[48px] px-4">
+                <RotateCcw size={20} /> Flip
+              </button>
+            </div>
           ) : (
-            <button onClick={startCamera} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]">
+            <button onClick={() => startCamera()} className="btn-primary w-full flex items-center justify-center gap-2 min-h-[48px]">
               <Camera size={20} /> {error ? 'Try Again' : 'Open Camera'}
             </button>
           )}
