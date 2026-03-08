@@ -10,6 +10,43 @@ interface AudioRecording {
   blob: Blob;
 }
 
+const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
+  const isUser = msg.role === 'user';
+  return (
+    <div
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+      style={{
+        opacity: 0,
+        animation: `chat-slide-up 0.2s ease-out ${index * 0.05}s forwards`,
+      }}
+    >
+      <div
+        className={`max-w-[85%] px-5 py-3 ${
+          isUser
+            ? 'rounded-3xl rounded-br-lg bg-soft-pink/20'
+            : 'glass-card rounded-3xl rounded-bl-lg'
+        }`}
+      >
+        <p className="text-foreground leading-relaxed">{msg.text}</p>
+        {msg.image_urls && msg.image_urls.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            {msg.image_urls.map((url, j) => (
+              <img
+                key={j}
+                src={url}
+                alt="Shared photo"
+                className="w-full h-20 object-cover"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+                loading="lazy"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ChatPage = () => {
   const { currentUser, people, addMemory, addAuditEntry } = useApp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -148,23 +185,12 @@ const ChatPage = () => {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
-      <div className="space-y-4 mb-4">
+      <div className="space-y-3 mb-4">
         {messages.length === 0 && (
           <BrainCharacter userName={currentUser.name} />
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-            <GlassCard className={`p-4 max-w-[85%] ${msg.role === 'user' ? 'bg-soft-pink/20' : ''}`}>
-              <p>{msg.text}</p>
-              {msg.image_urls && msg.image_urls.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  {msg.image_urls.map((url, j) => (
-                    <img key={j} src={url} alt="Shared photo" className="w-full h-20 object-cover" style={{ borderRadius: 'var(--radius-sm)' }} loading="lazy" />
-                  ))}
-                </div>
-              )}
-            </GlassCard>
-          </div>
+          <ChatBubble key={i} msg={msg} index={i} />
         ))}
       </div>
 
@@ -212,10 +238,10 @@ const ChatPage = () => {
 
       <GlassCard className="p-3 flex items-center gap-2">
         <input type="file" ref={fileRef} multiple accept="image/*" className="hidden" onChange={handleImages} />
-        <button onClick={() => fileRef.current?.click()} className="p-3 rounded-full hover:bg-soft-pink/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Add images">
+        <button onClick={() => fileRef.current?.click()} className="p-3 rounded-full hover:bg-soft-pink/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95" aria-label="Add images">
           <ImagePlus size={22} className="text-muted-foreground" />
         </button>
-        <button onClick={toggleVoice} className={`p-3 rounded-full transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center ${recording ? 'bg-destructive/20 text-destructive' : 'hover:bg-soft-pink/20 text-muted-foreground'}`} aria-label={recording ? 'Stop recording' : 'Start voice recording'}>
+        <button onClick={toggleVoice} className={`p-3 rounded-full transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95 ${recording ? 'bg-destructive/20 text-destructive' : 'hover:bg-soft-pink/20 text-muted-foreground'}`} aria-label={recording ? 'Stop recording' : 'Start voice recording'}>
           {recording ? <Square size={22} /> : <Mic size={22} />}
         </button>
         <input
@@ -225,7 +251,7 @@ const ChatPage = () => {
           placeholder="Type a message..."
           className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground min-h-[48px]"
         />
-        <button onClick={handleSend} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Send message">
+        <button onClick={handleSend} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:scale-95" aria-label="Send message">
           <Send size={20} className="text-soft-pink" />
         </button>
       </GlassCard>
