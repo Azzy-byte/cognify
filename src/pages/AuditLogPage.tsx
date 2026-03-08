@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Filter, Clock, Pill, Brain, Shield, AlertTriangle } from 'lucide-react';
+import { Clock, Pill, Brain, Shield, AlertTriangle } from 'lucide-react';
 
 const filters = ['All', 'Memories', 'Medications', 'Permissions'] as const;
 
@@ -36,12 +36,12 @@ const AuditLogPage = () => {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
-      <h1 className="text-2xl font-bold mb-4">📋 Audit Log</h1>
+      <h1 className="text-2xl font-bold mb-4">Audit Log</h1>
 
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {filters.map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`pill-badge whitespace-nowrap transition-all ${filter === f ? 'bg-lavender/30 text-foreground' : ''}`}>
+            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] ${filter === f ? 'bg-lavender/30 text-foreground' : ''}`}>
             {f}
           </button>
         ))}

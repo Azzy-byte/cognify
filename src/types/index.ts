@@ -32,6 +32,7 @@ export interface Person {
   name: string;
   relationship: string;
   photo_urls: string[];
+  photo_hashes: string[];
   times_mentioned: number;
   created_at: string;
 }

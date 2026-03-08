@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,16 +8,24 @@ import { AppProvider } from "@/store/AppContext";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import Navigation from "@/components/Navigation";
 import SOSButton from "@/components/SOSButton";
-import ChatPage from "@/pages/ChatPage";
-import MemoriesPage from "@/pages/MemoriesPage";
-import CameraPage from "@/pages/CameraPage";
-import MedicationsPage from "@/pages/MedicationsPage";
-import FamilyPage from "@/pages/FamilyPage";
-import MapPage from "@/pages/MapPage";
-import AuditLogPage from "@/pages/AuditLogPage";
-import NotFound from "./pages/NotFound";
+import ErrorBoundary from "@/components/ErrorBoundary";
+
+const ChatPage = lazy(() => import('@/pages/ChatPage'));
+const MemoriesPage = lazy(() => import('@/pages/MemoriesPage'));
+const CameraPage = lazy(() => import('@/pages/CameraPage'));
+const MedicationsPage = lazy(() => import('@/pages/MedicationsPage'));
+const FamilyPage = lazy(() => import('@/pages/FamilyPage'));
+const MapPage = lazy(() => import('@/pages/MapPage'));
+const AuditLogPage = lazy(() => import('@/pages/AuditLogPage'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
 const queryClient = new QueryClient();
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="w-8 h-8 border-2 border-lavender border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -27,16 +36,20 @@ const App = () => (
         <BrowserRouter>
           <AnimatedBackground />
           <div className="relative z-10">
-            <Routes>
-              <Route path="/" element={<ChatPage />} />
-              <Route path="/memories" element={<MemoriesPage />} />
-              <Route path="/camera" element={<CameraPage />} />
-              <Route path="/reminders" element={<MedicationsPage />} />
-              <Route path="/family" element={<FamilyPage />} />
-              <Route path="/map" element={<MapPage />} />
-              <Route path="/audit" element={<AuditLogPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<ChatPage />} />
+                  <Route path="/memories" element={<MemoriesPage />} />
+                  <Route path="/camera" element={<CameraPage />} />
+                  <Route path="/reminders" element={<MedicationsPage />} />
+                  <Route path="/family" element={<FamilyPage />} />
+                  <Route path="/map" element={<MapPage />} />
+                  <Route path="/audit" element={<AuditLogPage />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </div>
           <SOSButton />
           <Navigation />

@@ -15,7 +15,7 @@ const Navigation = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card rounded-none rounded-t-3xl">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-card rounded-none" style={{ borderTopLeftRadius: 'var(--radius-lg)', borderTopRightRadius: 'var(--radius-lg)' }}>
       <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
         {tabs.map(({ path, icon: Icon, label }) => {
           const active = location.pathname === path;
@@ -23,9 +23,12 @@ const Navigation = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all duration-300 min-w-[56px] ${
+              className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors duration-200 min-w-[56px] min-h-[48px] ${
                 active ? 'bg-lavender/20 text-lavender' : 'text-muted-foreground hover:text-foreground'
               }`}
+              style={{ borderRadius: 'var(--radius-sm)' }}
+              aria-label={label}
+              aria-current={active ? 'page' : undefined}
             >
               <Icon size={22} strokeWidth={active ? 2.5 : 2} />
               <span className="text-[11px] font-medium">{label}</span>

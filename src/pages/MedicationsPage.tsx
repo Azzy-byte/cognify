@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { Plus, Pill, Clock, Trash2, Check, Bell, X } from 'lucide-react';
@@ -11,15 +11,15 @@ const MedicationsPage = () => {
   const [frequency, setFrequency] = useState('daily');
   const [times, setTimes] = useState<string[]>(['08:00']);
   const [prescriber, setPrescriber] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // Check reminders every minute
   useEffect(() => {
     const check = () => {
       const now = new Date();
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       reminders.filter(r => !r.completed && r.time === currentTime).forEach(r => {
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(`💊 ${r.title}`, { body: 'Time to take your medication', icon: '💊' });
+          new Notification(r.title, { body: 'Time to take your medication' });
         }
       });
     };
@@ -36,7 +36,6 @@ const MedicationsPage = () => {
       prescriber: prescriber.trim(), start_date: new Date().toISOString().split('T')[0],
       created_by: currentUser.id, last_modified_by: currentUser.id,
     });
-    // Auto-generate reminders
     times.forEach(time => {
       addReminder({
         title: `Take ${name} ${dosage}`,
@@ -59,10 +58,15 @@ const MedicationsPage = () => {
 
   const handleDelete = (med: typeof medications[0]) => {
     if (!canEdit(med.created_by)) {
-      alert("You can only edit items you created");
+      alert("You can only delete medications you created");
+      return;
+    }
+    if (confirmDelete !== med.id) {
+      setConfirmDelete(med.id);
       return;
     }
     deleteMedication(med.id);
+    setConfirmDelete(null);
     addAuditEntry({
       timestamp: new Date().toISOString(),
       actor_id: currentUser.id,
@@ -82,8 +86,8 @@ const MedicationsPage = () => {
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">🔔 Medications & Reminders</h1>
-        <button onClick={() => setShowForm(!showForm)} className="p-2 rounded-full bg-lavender/20 hover:bg-lavender/30 transition-colors">
+        <h1 className="text-2xl font-bold">Medications & Reminders</h1>
+        <button onClick={() => setShowForm(!showForm)} className="p-3 rounded-full bg-lavender/20 hover:bg-lavender/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={showForm ? 'Close form' : 'Add medication'}>
           {showForm ? <X size={22} /> : <Plus size={22} />}
         </button>
       </div>
@@ -105,16 +109,16 @@ const MedicationsPage = () => {
                 <div key={i} className="flex gap-2 mb-2">
                   <input type="time" value={t} onChange={e => setTimes(prev => prev.map((v, j) => j === i ? e.target.value : v))} className="input-glass flex-1" />
                   {times.length > 1 && (
-                    <button onClick={() => setTimes(prev => prev.filter((_, j) => j !== i))} className="p-2 text-destructive">
+                    <button onClick={() => setTimes(prev => prev.filter((_, j) => j !== i))} className="p-2 text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Remove time">
                       <Trash2 size={16} />
                     </button>
                   )}
                 </div>
               ))}
-              <button onClick={() => setTimes(prev => [...prev, '12:00'])} className="text-sm text-lavender hover:underline">+ Add time</button>
+              <button onClick={() => setTimes(prev => [...prev, '12:00'])} className="text-sm text-lavender hover:underline min-h-[44px]">+ Add time</button>
             </div>
             <input value={prescriber} onChange={e => setPrescriber(e.target.value)} placeholder="Prescriber" className="input-glass w-full" />
-            <button onClick={handleAdd} className="btn-primary w-full">Add Medication</button>
+            <button onClick={handleAdd} className="btn-primary w-full min-h-[48px]">Add Medication</button>
           </div>
         </GlassCard>
       )}
@@ -132,7 +136,7 @@ const MedicationsPage = () => {
                     <p className="text-xs text-muted-foreground">{r.time}</p>
                   </div>
                 </div>
-                <button onClick={() => markComplete(r)} className="p-2 rounded-full hover:bg-mint/20 transition-colors">
+                <button onClick={() => markComplete(r)} className="p-3 rounded-full hover:bg-mint/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Mark as taken">
                   <Check size={18} className="text-mint" />
                 </button>
               </GlassCard>
@@ -154,17 +158,24 @@ const MedicationsPage = () => {
                   <p className="text-sm text-muted-foreground">{med.dosage} · {med.frequency}</p>
                   <div className="flex gap-2 mt-1">
                     {med.times.map((t, i) => (
-                      <span key={i} className="pill-badge text-xs">🕐 {t}</span>
+                      <span key={i} className="pill-badge text-xs">{t}</span>
                     ))}
                   </div>
                   {med.prescriber && <p className="text-xs text-muted-foreground mt-1">Prescribed by {med.prescriber}</p>}
                 </div>
                 {canEdit(med.created_by) && (
-                  <button onClick={() => handleDelete(med)} className="p-2 text-destructive/60 hover:text-destructive transition-colors">
-                    <Trash2 size={16} />
+                  <button
+                    onClick={() => handleDelete(med)}
+                    className={`p-2 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${confirmDelete === med.id ? 'text-destructive' : 'text-destructive/60 hover:text-destructive'}`}
+                    aria-label={confirmDelete === med.id ? 'Confirm delete' : 'Delete medication'}
+                  >
+                    {confirmDelete === med.id ? <X size={16} /> : <Trash2 size={16} />}
                   </button>
                 )}
               </div>
+              {confirmDelete === med.id && (
+                <p className="text-xs text-destructive mt-2 animate-fade-in">Tap again to confirm deletion</p>
+              )}
             </GlassCard>
           ))}
         </div>

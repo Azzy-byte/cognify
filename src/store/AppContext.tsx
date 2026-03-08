@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { v4 as uuid } from 'uuid';
 import type { AppState, Memory, Person, Medication, Reminder, Contact, SafeZone, SOSEvent, AuditEntry, Location, FamilyMember } from '@/types';
 
@@ -21,10 +21,11 @@ function defaultData(): AppState {
         id: uuid(), conversation: [
           { role: 'user', text: 'Emily came to visit today with the grandkids! We baked cookies together.' },
           { role: 'assistant', text: 'That sounds wonderful! What kind of cookies did you bake?' },
-          { role: 'user', text: 'Chocolate chip, Emily\'s favorite since she was little.' }
+          { role: 'user', text: "Chocolate chip, Emily's favorite since she was little." }
         ],
         summary: 'Emily visited with grandkids, baked chocolate chip cookies together',
-        image_urls: [], people: ['Emily'], category: 'family',
+        image_urls: ['https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=600&h=400&fit=crop'],
+        people: ['Emily'], category: 'family',
         created_by: patientId, created_at: new Date(Date.now() - 86400000).toISOString()
       },
       {
@@ -39,19 +40,20 @@ function defaultData(): AppState {
       },
       {
         id: uuid(), conversation: [
-          { role: 'user', text: 'Michael called from California! He\'s planning to visit next month.' },
+          { role: 'user', text: "Michael called from California! He's planning to visit next month." },
           { role: 'assistant', text: 'How exciting! How long will he stay?' },
           { role: 'user', text: 'A whole week. He wants to take me to the garden show.' }
         ],
         summary: 'Michael calling from California, visiting next month for a week, garden show planned',
-        image_urls: [], people: ['Michael'], category: 'family',
+        image_urls: ['https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=600&h=400&fit=crop'],
+        people: ['Michael'], category: 'family',
         created_by: familyId1, created_at: new Date(Date.now() - 259200000).toISOString()
       },
     ],
     people: [
-      { id: uuid(), name: 'Emily', relationship: 'Daughter', photo_urls: [], times_mentioned: 5, created_at: new Date().toISOString() },
-      { id: uuid(), name: 'Michael', relationship: 'Son', photo_urls: [], times_mentioned: 3, created_at: new Date().toISOString() },
-      { id: uuid(), name: 'Dr. Smith', relationship: 'Doctor', photo_urls: [], times_mentioned: 2, created_at: new Date().toISOString() },
+      { id: uuid(), name: 'Emily', relationship: 'Daughter', photo_urls: [], photo_hashes: [], times_mentioned: 5, created_at: new Date().toISOString() },
+      { id: uuid(), name: 'Michael', relationship: 'Son', photo_urls: [], photo_hashes: [], times_mentioned: 3, created_at: new Date().toISOString() },
+      { id: uuid(), name: 'Dr. Smith', relationship: 'Doctor', photo_urls: [], photo_hashes: [], times_mentioned: 2, created_at: new Date().toISOString() },
     ],
     medications: [
       { id: uuid(), name: 'Lisinopril', dosage: '10mg', frequency: 'daily', times: ['08:00', '20:00'], prescriber: 'Dr. Smith', start_date: '2024-01-15', created_by: patientId, last_modified_by: patientId, created_at: new Date().toISOString() },
@@ -86,8 +88,18 @@ function defaultData(): AppState {
 function loadState(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Migrate: ensure photo_hashes exists on all people
+      if (parsed.people) {
+        parsed.people = parsed.people.map((p: Person) => ({
+          ...p,
+          photo_hashes: p.photo_hashes || [],
+        }));
+      }
+      return parsed;
+    }
+  } catch { /* use defaults */ }
   return defaultData();
 }
 
