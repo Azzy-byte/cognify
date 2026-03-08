@@ -202,6 +202,14 @@ const MemoriesPage = () => {
 
             <h3 className="text-lg font-bold mb-2 pr-10">{selectedMemory.summary}</h3>
 
+            {selectedMemory.image_urls.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {selectedMemory.image_urls.map((url, j) => (
+                  <img key={j} src={url} alt="Memory photo" className="w-full h-32 object-cover rounded-xl" loading="lazy" />
+                ))}
+              </div>
+            )}
+
             {selectedMemory.conversation.length > 0 && (
               <div className="mb-4 p-3 bg-muted/20 rounded-xl">
                 <p className="text-sm text-muted-foreground leading-relaxed">
