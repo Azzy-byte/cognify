@@ -166,36 +166,64 @@ const MapPage = () => {
     );
   }, []);
 
-  // Check if user is outside all safe zones
+  // Life360-style lost detection: distance, prolonged drift, and circular movement
   const checkLostStatus = useCallback((loc: { lat: number; lng: number }) => {
     if (safeZones.length === 0) return;
+
+    const now = Date.now();
+    movementHistoryRef.current = [...movementHistoryRef.current, { ...loc, at: now }].filter(p => now - p.at < 10 * 60 * 1000).slice(-20);
 
     let inAnyZone = false;
     let closestZone = safeZones[0];
     let minDist = Infinity;
 
-    for (const z of safeZones) {
-      const d = getDistance(loc.lat, loc.lng, z.lat, z.lng);
-      if (d < minDist) { minDist = d; closestZone = z; }
-      if (d <= z.radius_meters) { inAnyZone = true; }
+    for (const zone of safeZones) {
+      const distance = getDistance(loc.lat, loc.lng, zone.lat, zone.lng);
+      if (distance < minDist) {
+        minDist = distance;
+        closestZone = zone;
+      }
+      if (distance <= zone.radius_meters) inAnyZone = true;
     }
 
-    if (!inAnyZone && minDist > 200) {
-      setIsLost(true);
-      setLostInfo({ zone: closestZone.name, distance: minDist });
+    const homeZone = safeZones.find(z => z.name.toLowerCase().includes('home')) || safeZones[0];
+    const homeDistance = getDistance(loc.lat, loc.lng, homeZone.lat, homeZone.lng);
+    const homeThreshold = Math.max(homeZone.radius_meters + 250, 450);
+    const farFromHome = homeDistance > homeThreshold;
 
-      // Browser notification
+    if (farFromHome) {
+      if (!outsideHomeSinceRef.current) outsideHomeSinceRef.current = now;
+    } else {
+      outsideHomeSinceRef.current = null;
+    }
+
+    const awayForLong = !!outsideHomeSinceRef.current && now - outsideHomeSinceRef.current > 3 * 60 * 1000;
+    const movingInCircles = detectCircularMovement(movementHistoryRef.current);
+
+    let reason = '';
+    if (!inAnyZone && minDist > 300) {
+      reason = 'outside your safe zones';
+    } else if (awayForLong) {
+      reason = 'far from home for several minutes';
+    } else if (movingInCircles) {
+      reason = 'repeated circular movement';
+    }
+
+    if (reason && now >= lostSnoozedUntilRef.current) {
+      setIsLost(true);
+      setLostInfo({ zone: closestZone.name, distance: minDist, reason });
+
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Are you lost?', {
-          body: `You are ${formatDistance(minDist)} from ${closestZone.name}. Tap to get help.`,
+          body: `Detected ${reason}. You are ${formatDistance(minDist)} from ${closestZone.name}.`,
           tag: 'lost-detection',
         });
       }
-    } else {
-      setIsLost(false);
-      setLostInfo(null);
-      setShowNavHome(false);
+      return;
     }
+
+    setIsLost(false);
+    setLostInfo(null);
   }, [safeZones]);
 
   const startTracking = useCallback(() => {
