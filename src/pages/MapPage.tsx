@@ -234,6 +234,11 @@ const MapPage = () => {
     };
   }, []);
 
+  const handleShowDirections = () => {
+    setShowNavHome(true);
+    setIsLost(false);
+  };
+
   const handleSOS = () => {
     if (!currentPos) return;
     addSOSEvent({
