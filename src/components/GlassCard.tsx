@@ -5,10 +5,11 @@ interface GlassCardProps {
   className?: string;
   hover?: boolean;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
-const GlassCard = ({ children, className = '', hover = false, onClick }: GlassCardProps) => (
-  <div className={`${hover ? 'glass-card-hover cursor-pointer' : 'glass-card'} ${className}`} onClick={onClick}>
+const GlassCard = ({ children, className = '', hover = false, onClick, style }: GlassCardProps) => (
+  <div className={`${hover ? 'glass-card-hover cursor-pointer' : 'glass-card'} ${className}`} onClick={onClick} style={style}>
     {children}
   </div>
 );

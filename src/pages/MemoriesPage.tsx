@@ -81,7 +81,7 @@ const MemoriesPage = () => {
                 </div>
               )}
               <button
-                onClick={e => { e.stopPropagation(); setExpandedId(expandedId === memory.id ? null : memory.id); }}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedId(expandedId === memory.id ? null : memory.id); }}
                 className="mt-2 text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors"
               >
                 {expandedId === memory.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
