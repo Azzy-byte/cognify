@@ -139,16 +139,21 @@ const CameraPage = () => {
 
   // Build an extended people list that includes perceptual hashes from memories
   const getPeopleWithMemoryHashes = useCallback(() => {
-    const knownPeople = people.map(person => ({
-      ...person,
-      photo_hashes: [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])],
-    }));
+    const knownPeople = people.map(person => {
+      const baseHashes = [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])];
+      const visuallyLinkedMemoryHashes = getVisualNeighborHashes(baseHashes, memoryImageHashes, 0.34);
+
+      return {
+        ...person,
+        photo_hashes: [...new Set([...baseHashes, ...visuallyLinkedMemoryHashes])],
+      };
+    });
 
     const knownNames = new Set(knownPeople.map(p => p.name.toLowerCase()));
     const memoryOnlyPeople = derivedMemoryPeople.filter(p => !knownNames.has(p.name.toLowerCase()));
 
     return [...knownPeople, ...memoryOnlyPeople];
-  }, [people, memoryHashesByPerson, derivedMemoryPeople]);
+  }, [people, memoryHashesByPerson, memoryImageHashes, derivedMemoryPeople]);
 
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
