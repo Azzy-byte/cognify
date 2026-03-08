@@ -115,7 +115,7 @@ const BrainCharacter = ({ greeting, userName }: BrainCharacterProps) => {
           {/* Arm */}
           <path d="M156 95 C162 88, 166 74, 160 60" stroke="hsl(340 45% 62%)" strokeWidth="6" strokeLinecap="round" fill="none" />
           {/* Hand / pointer finger */}
-          <circle cx="160" cy="58" r="4" fill="hsl(12 50% 62%)" />
+          <circle cx="160" cy="58" r="4" fill="hsl(340 45% 62%)" />
 
           {/* Lightbulb */}
           <g>
