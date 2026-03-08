@@ -96,7 +96,7 @@ const MemoriesPage = () => {
       {selectedMemory && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setSelectedMemory(null)}>
           <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
-          <GlassCard className="relative p-6 max-w-md w-full max-h-[80vh] overflow-y-auto animate-scale-in" onClick={() => { /* stop propagation handled by wrapper */ }}>
+          <div className="relative glass-card p-6 max-w-md w-full max-h-[80vh] overflow-y-auto animate-scale-in" onClick={e => e.stopPropagation()}>
             <button onClick={() => setSelectedMemory(null)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted">
               <X size={20} />
             </button>
