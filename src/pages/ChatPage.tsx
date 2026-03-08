@@ -269,10 +269,10 @@ const ChatPage = () => {
   };
 
   const quickActions = [
-    { label: '💊 My Meds', prompt: 'What are my current medications and when should I take them?' },
-    { label: '🧠 Memories', prompt: 'Show me my recent memories and what happened' },
-    { label: '👥 People', prompt: 'Who are the people I know? Tell me about them.' },
-    { label: '❓ Help', prompt: 'What can you help me with?' },
+    { label: 'My Meds', prompt: 'What are my current medications and when should I take them?' },
+    { label: 'Memories', prompt: 'Show me my recent memories and what happened' },
+    { label: 'People', prompt: 'Who are the people I know? Tell me about them.' },
+    { label: 'Help', prompt: 'What can you help me with?' },
   ];
 
   const handleQuickAction = (prompt: string) => {
