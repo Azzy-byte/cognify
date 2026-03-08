@@ -10,6 +10,7 @@ import Navigation from "@/components/Navigation";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import BrandMark from '@/components/BrandMark';
 import ProfileSetupModal from '@/components/ProfileSetupModal';
+import TopHeader from '@/components/TopHeader';
 
 const ChatPage = lazy(() => import('@/pages/ChatPage'));
 const MemoriesPage = lazy(() => import('@/pages/MemoriesPage'));
@@ -39,6 +40,7 @@ const App = () => (
           <AnimatedBackground />
           <BrandMark />
           <ProfileSetupModal />
+          <TopHeader />
           <div className="relative z-10">
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
