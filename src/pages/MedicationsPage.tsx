@@ -546,13 +546,39 @@ const MedicationsPage = () => {
                 </div>
               ) : (
                 <div className="flex justify-between items-start">
-                  <div className="flex-1">
+                <div className="flex-1">
                     <h3 className="font-semibold text-foreground">{med.name}</h3>
                     <p className="text-sm text-muted-foreground">{med.dosage} - {med.frequency}</p>
                     <div className="flex gap-2 mt-1">
                       {med.times.map((t, i) => <span key={i} className="pill-badge text-xs">{t}</span>)}
                     </div>
                     {med.prescriber && <p className="text-xs text-muted-foreground mt-1">Prescribed by {med.prescriber}</p>}
+                    {(() => {
+                      const info = getSupplyInfo(med);
+                      if (!info) return null;
+                      const pct = Math.round((info.remaining / info.total) * 100);
+                      const isLow = info.daysLeft <= 7;
+                      const isEmpty = info.remaining <= 0;
+                      return (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Package size={12} />
+                              {isEmpty ? 'Out of stock' : `${info.remaining} doses left (${info.daysLeft}d)`}
+                            </span>
+                            <span className={`font-medium ${isEmpty ? 'text-destructive' : isLow ? 'text-peach' : 'text-mint'}`}>
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${isEmpty ? 'bg-destructive' : isLow ? 'bg-peach' : 'bg-mint'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center gap-1">
                     {canEdit(med.created_by) && (
