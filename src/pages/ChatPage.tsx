@@ -233,7 +233,7 @@ const ChatPage = () => {
     );
     const summary = messages.filter(m => m.role === 'user').map(m => m.text).join('. ').slice(0, 200);
     const allImages = messages.flatMap(m => m.image_urls || []).concat(images);
-    const allAudioUrls = audioRecordings.map(r => r.url);
+    const allAudioUrls = messages.flatMap(m => m.audio_urls || []);
 
     addMemory({
       conversation: messages,
