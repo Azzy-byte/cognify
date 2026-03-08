@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/Cognify-AI%20Memory%20Companion-8B5CF6?style=for-the-badge&logo=brain&logoColor=white" alt="Cognify" />
 </p>
 
-<h1 align="center">🧠 Cognify — AI-Powered Cognitive Care Companion</h1>
+<h1 align="center">🧠 Cognify - AI-Powered Cognitive Care Companion</h1>
 
 <p align="center">
   <em>Restoring independence and dignity to people living with dementia and memory challenges — one interaction at a time.</em>
