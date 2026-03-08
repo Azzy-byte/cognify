@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, Play, Pause, X } from 'lucide-react';
+import { Search, Play, Pause, X, Pencil, Trash2 } from 'lucide-react';
 import type { Memory } from '@/types';
 
 const categories = ['All', 'Family', 'Social', 'Health', 'General'] as const;
@@ -17,12 +17,17 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(days / 30)} months ago`;
 }
 
+function conversationToNarrative(conversation: { role: string; text: string }[]): string {
+  return conversation.filter(m => m.role === 'user').map(m => m.text).join('. ') + '.';
+}
+
 const MemoriesPage = () => {
-  const { memories } = useApp();
+  const { memories, currentUser, canEdit, addAuditEntry } = useApp();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('All');
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -35,6 +40,23 @@ const MemoriesPage = () => {
     }
     return true;
   }), [memories, category, debouncedSearch]);
+
+  const handleDelete = useCallback((memoryId: string) => {
+    if (confirmDelete !== memoryId) {
+      setConfirmDelete(memoryId);
+      return;
+    }
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'memory_deleted',
+      target_type: 'memory',
+      target_id: memoryId,
+    });
+    setConfirmDelete(null);
+    setSelectedMemory(null);
+  }, [confirmDelete, currentUser, addAuditEntry]);
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
@@ -52,7 +74,7 @@ const MemoriesPage = () => {
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {categories.map(c => (
           <button key={c} onClick={() => setCategory(c)}
-            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] ${category === c ? 'bg-lavender/30 text-foreground' : ''}`}>
+            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] ${category === c ? 'bg-soft-pink/30 text-foreground' : ''}`}>
             {c}
           </button>
         ))}
@@ -74,8 +96,8 @@ const MemoriesPage = () => {
                       className="w-full aspect-video object-cover"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-transparent to-transparent" />
-                    <p className="absolute bottom-3 left-3 right-3 text-card font-medium text-sm line-clamp-2">
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(45,55,72,0.7) 100%)' }} />
+                    <p className="absolute bottom-3 left-3 right-3 text-white font-medium text-sm line-clamp-2">
                       {memory.summary}
                     </p>
                   </div>
@@ -90,13 +112,13 @@ const MemoriesPage = () => {
                   <div className="px-4 py-2 flex items-center gap-2 border-t border-border">
                     <button
                       onClick={(e) => { e.stopPropagation(); setPlayingAudio(playingAudio === memory.id ? null : memory.id); }}
-                      className="p-2 rounded-full bg-lavender/20 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                      className="p-2 rounded-full bg-soft-pink/20 min-w-[40px] min-h-[40px] flex items-center justify-center"
                       aria-label={playingAudio === memory.id ? 'Pause audio' : 'Play audio'}
                     >
                       {playingAudio === memory.id ? <Pause size={16} /> : <Play size={16} />}
                     </button>
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-lavender/40 rounded-full" style={{ width: '0%' }} />
+                      <div className="h-full bg-soft-pink/40 rounded-full" style={{ width: '0%' }} />
                     </div>
                   </div>
                 )}
@@ -121,10 +143,10 @@ const MemoriesPage = () => {
 
       {/* Detail modal */}
       {selectedMemory && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setSelectedMemory(null)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => { setSelectedMemory(null); setConfirmDelete(null); }}>
           <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" />
           <div className="relative glass-card p-6 max-w-md w-full max-h-[80vh] overflow-y-auto animate-scale-in" style={{ borderRadius: 'var(--radius-lg)' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedMemory(null)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Close">
+            <button onClick={() => { setSelectedMemory(null); setConfirmDelete(null); }} className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Close">
               <X size={20} />
             </button>
 
@@ -140,26 +162,56 @@ const MemoriesPage = () => {
             {/* Audio player */}
             {selectedMemory.audio_url && (
               <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-xl">
-                <button className="p-3 rounded-full bg-lavender/20 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Play audio">
+                <button className="p-3 rounded-full bg-soft-pink/20 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Play audio">
                   <Play size={20} />
                 </button>
                 <div className="flex-1">
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-lavender/40 rounded-full" style={{ width: '0%' }} />
+                    <div className="h-full bg-soft-pink/40 rounded-full" style={{ width: '0%' }} />
                   </div>
+                  {selectedMemory.transcription && (
+                    <p className="text-sm text-muted-foreground mt-2 italic">"{selectedMemory.transcription}"</p>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Summary */}
-            <h3 className="text-lg font-bold mb-4">{selectedMemory.summary}</h3>
+            <h3 className="text-lg font-bold mb-2">{selectedMemory.summary}</h3>
+
+            {/* Narrative from conversation */}
+            {selectedMemory.conversation.length > 0 && (
+              <div className="mb-4 p-3 bg-muted/20 rounded-xl">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {conversationToNarrative(selectedMemory.conversation)}
+                </p>
+              </div>
+            )}
 
             {/* People & metadata */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-4">
               {selectedMemory.people.map(p => <span key={p} className="pill-badge">{p}</span>)}
               <span className="pill-badge">{selectedMemory.category}</span>
               <span className="pill-badge">{timeAgo(selectedMemory.created_at)}</span>
             </div>
+
+            {/* Actions */}
+            {canEdit(selectedMemory.created_by) && (
+              <div className="flex gap-2">
+                <button className="btn-primary flex-1 flex items-center justify-center gap-2 min-h-[48px]">
+                  <Pencil size={16} /> Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(selectedMemory.id)}
+                  className={`min-h-[48px] min-w-[48px] flex items-center justify-center rounded-xl transition-colors ${
+                    confirmDelete === selectedMemory.id ? 'bg-destructive text-destructive-foreground' : 'bg-destructive/10 text-destructive'
+                  }`}
+                  aria-label={confirmDelete === selectedMemory.id ? 'Confirm delete' : 'Delete memory'}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -4,40 +4,42 @@
 
 @layer base {
   :root {
-    --background: 260 40% 96%;
-    --foreground: 250 25% 20%;
+    --background: 20 100% 97%;
+    --foreground: 215 28% 23%;
     --card: 0 0% 100%;
-    --card-foreground: 250 25% 20%;
+    --card-foreground: 215 28% 23%;
     --popover: 0 0% 100%;
-    --popover-foreground: 250 25% 20%;
-    --primary: 262 52% 73%;
-    --primary-foreground: 260 40% 15%;
-    --secondary: 210 72% 84%;
-    --secondary-foreground: 210 40% 15%;
-    --muted: 260 20% 92%;
-    --muted-foreground: 250 10% 45%;
-    --accent: 150 62% 84%;
+    --popover-foreground: 215 28% 23%;
+    --primary: 350 100% 85%;
+    --primary-foreground: 215 28% 23%;
+    --secondary: 199 62% 79%;
+    --secondary-foreground: 215 28% 23%;
+    --muted: 20 20% 94%;
+    --muted-foreground: 215 14% 55%;
+    --accent: 150 55% 80%;
     --accent-foreground: 150 40% 15%;
     --destructive: 0 72% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 100% / 0.4;
     --input: 0 0% 100% / 0.5;
-    --ring: 262 52% 73%;
+    --ring: 350 100% 85%;
 
     --radius-sm: 12px;
     --radius-md: 20px;
     --radius-lg: 24px;
 
-    --lavender: 262 52% 73%;
-    --sky-blue: 210 72% 84%;
-    --mint: 150 62% 84%;
+    --soft-pink: 350 100% 85%;
+    --sky-blue: 199 62% 79%;
+    --mint: 150 55% 80%;
+    --lavender: 275 52% 81%;
+    --peach: 25 100% 85%;
+    --coral: 0 83% 80%;
     --blush-pink: 340 62% 87%;
     --soft-peach: 25 62% 87%;
-    --coral: 0 83% 80%;
 
-    --glass-bg: 0 0% 100% / 0.65;
-    --glass-border: 0 0% 100% / 0.4;
-    --glass-shadow: 262 52% 73% / 0.12;
+    --glass-bg: 0 0% 100% / 0.75;
+    --glass-border: 350 100% 85% / 0.2;
+    --glass-shadow: 350 100% 85% / 0.12;
   }
 }
 
@@ -52,7 +54,6 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
-  /* Focus indicators for accessibility */
   :focus-visible {
     outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
@@ -77,7 +78,7 @@
     box-shadow: 0 12px 40px hsla(var(--glass-shadow));
   }
   .gradient-bg {
-    background: linear-gradient(135deg, #F0E6FA, #E6F0FA, #E6FAF0);
+    background: linear-gradient(135deg, #FFF8F0 0%, #FFE8F0 25%, #E8F4F8 50%, #E8F8F0 75%, #FFF8F0 100%);
     min-height: 100vh;
   }
   .btn-primary {
@@ -85,11 +86,23 @@
     border-radius: var(--radius-sm);
     min-height: 48px;
     padding: 12px 32px;
-    background: linear-gradient(135deg, hsl(var(--lavender)), hsl(var(--sky-blue)));
-    color: hsl(var(--primary-foreground));
+    background: linear-gradient(135deg, hsl(var(--soft-pink)), hsl(var(--sky-blue)));
+    color: hsl(var(--foreground));
     transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .btn-primary:hover {
+    transform: translateY(-2px);
+  }
+  .btn-secondary {
+    @apply font-semibold;
+    border-radius: var(--radius-sm);
+    min-height: 48px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, hsl(var(--mint)), hsl(var(--lavender)));
+    color: hsl(var(--foreground));
+    transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-secondary:hover {
     transform: translateY(-2px);
   }
   .btn-pink {
@@ -97,8 +110,8 @@
     border-radius: var(--radius-sm);
     min-height: 48px;
     padding: 12px 32px;
-    background: linear-gradient(135deg, hsl(var(--blush-pink)), hsl(var(--soft-peach)));
-    color: hsl(var(--primary-foreground));
+    background: linear-gradient(135deg, hsl(var(--soft-pink)), hsl(var(--peach)));
+    color: hsl(var(--foreground));
     transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .btn-pink:hover {
@@ -120,8 +133,8 @@
     @apply text-sm font-medium;
     border-radius: var(--radius-sm);
     padding: 4px 12px;
-    background: hsla(var(--lavender) / 0.2);
-    color: hsl(var(--lavender));
+    background: hsla(var(--soft-pink) / 0.2);
+    color: hsl(var(--foreground));
   }
   .input-glass {
     @apply px-4 py-3 outline-none;
@@ -133,26 +146,31 @@
     transition: border-color 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   .input-glass:focus {
-    border-color: hsl(var(--lavender));
-    box-shadow: 0 0 0 3px hsla(var(--lavender) / 0.15);
+    border-color: hsl(var(--soft-pink));
+    box-shadow: 0 0 0 3px hsla(var(--soft-pink) / 0.15);
   }
 }
 
 /* Animated Background Orbs */
 @keyframes orb-float-1 {
-  0%, 100% { transform: translate(0, 0); }
-  33% { transform: translate(30px, -30px); }
-  66% { transform: translate(-20px, 20px); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 @keyframes orb-float-2 {
-  0%, 100% { transform: translate(0, 0); }
-  33% { transform: translate(-30px, 30px); }
-  66% { transform: translate(20px, -20px); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 25px) scale(0.95); }
+  66% { transform: translate(35px, -15px) scale(1.05); }
 }
 @keyframes orb-float-3 {
-  0%, 100% { transform: translate(0, 0); }
-  33% { transform: translate(20px, 30px); }
-  66% { transform: translate(-30px, -20px); }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, 30px) scale(1.08); }
+  66% { transform: translate(-30px, -20px) scale(0.92); }
+}
+@keyframes orb-float-4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-15px, -25px) scale(0.98); }
+  66% { transform: translate(25px, 15px) scale(1.02); }
 }
 
 @keyframes pulse-sos {
@@ -162,35 +180,47 @@
 
 @keyframes brain-breathe {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+  50% { transform: scale(1.03); }
 }
 
 .orb {
   position: fixed;
-  width: 700px;
-  height: 700px;
   border-radius: 50%;
   filter: blur(120px);
   pointer-events: none;
   z-index: 0;
 }
 .orb-1 {
-  background: hsl(var(--lavender));
+  width: 700px;
+  height: 700px;
+  background: hsl(var(--soft-pink));
   opacity: 0.2;
   top: -200px; left: -200px;
-  animation: orb-float-1 40s ease-in-out infinite;
+  animation: orb-float-1 45s ease-in-out infinite;
 }
 .orb-2 {
+  width: 600px;
+  height: 600px;
   background: hsl(var(--sky-blue));
   opacity: 0.15;
   top: 40%; right: -200px;
-  animation: orb-float-2 50s ease-in-out infinite;
+  animation: orb-float-2 55s ease-in-out infinite;
 }
 .orb-3 {
+  width: 700px;
+  height: 700px;
   background: hsl(var(--mint));
   opacity: 0.15;
   bottom: -200px; left: 30%;
-  animation: orb-float-3 60s ease-in-out infinite;
+  animation: orb-float-3 50s ease-in-out infinite;
+}
+.orb-4 {
+  width: 500px;
+  height: 500px;
+  background: hsl(var(--lavender));
+  opacity: 0.12;
+  top: 20%; left: 50%;
+  animation: orb-float-4 60s ease-in-out infinite;
 }
 
 .sos-pulse {
@@ -199,6 +229,7 @@
 
 .brain-idle {
   animation: brain-breathe 3s ease-in-out infinite;
+  transform-origin: center;
 }
 
 /* Leaflet overrides */
@@ -215,7 +246,7 @@
   .glass-card-hover:hover {
     transform: none;
   }
-  .btn-primary:hover, .btn-pink:hover, .btn-danger:hover {
+  .btn-primary:hover, .btn-pink:hover, .btn-danger:hover, .btn-secondary:hover {
     transform: none;
   }
 }

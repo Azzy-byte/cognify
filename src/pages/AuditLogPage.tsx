@@ -6,8 +6,9 @@ import { Clock, Pill, Brain, Shield, AlertTriangle } from 'lucide-react';
 const filters = ['All', 'Memories', 'Medications', 'Permissions'] as const;
 
 const iconMap: Record<string, React.ReactNode> = {
-  memory_created: <Brain size={16} className="text-lavender" />,
+  memory_created: <Brain size={16} className="text-soft-pink" />,
   memory_edited: <Brain size={16} className="text-sky-blue" />,
+  memory_deleted: <Brain size={16} className="text-destructive" />,
   medication_added: <Pill size={16} className="text-mint" />,
   medication_updated: <Pill size={16} className="text-sky-blue" />,
   medication_deleted: <Pill size={16} className="text-destructive" />,
@@ -17,12 +18,13 @@ const iconMap: Record<string, React.ReactNode> = {
   person_tagged: <Brain size={16} className="text-mint" />,
   person_added: <Brain size={16} className="text-sky-blue" />,
   safe_zone_added: <Shield size={16} className="text-mint" />,
+  reminder_added: <Clock size={16} className="text-sky-blue" />,
 };
 
 const filterMatch: Record<string, string[]> = {
   All: [],
-  Memories: ['memory_created', 'memory_edited', 'person_tagged', 'person_added'],
-  Medications: ['medication_added', 'medication_updated', 'medication_deleted'],
+  Memories: ['memory_created', 'memory_edited', 'memory_deleted', 'person_tagged', 'person_added'],
+  Medications: ['medication_added', 'medication_updated', 'medication_deleted', 'reminder_added'],
   Permissions: ['permission_changed'],
 };
 
@@ -41,7 +43,7 @@ const AuditLogPage = () => {
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {filters.map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] ${filter === f ? 'bg-lavender/30 text-foreground' : ''}`}>
+            className={`pill-badge whitespace-nowrap transition-colors duration-200 min-h-[40px] ${filter === f ? 'bg-soft-pink/30 text-foreground' : ''}`}>
             {f}
           </button>
         ))}

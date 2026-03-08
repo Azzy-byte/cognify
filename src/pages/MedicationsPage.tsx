@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
-import { Plus, Pill, Clock, Trash2, Check, Bell, X } from 'lucide-react';
+import { Plus, Pill, Clock, Trash2, Check, Bell, X, Calendar } from 'lucide-react';
 
 const MedicationsPage = () => {
   const { medications, reminders, currentUser, addMedication, deleteMedication, addReminder, updateReminder, addAuditEntry, canEdit } = useApp();
   const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<'medication' | 'routine'>('medication');
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
   const [frequency, setFrequency] = useState('daily');
@@ -13,13 +14,19 @@ const MedicationsPage = () => {
   const [prescriber, setPrescriber] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+  // Routine fields
+  const [routineTitle, setRoutineTitle] = useState('');
+  const [routineTime, setRoutineTime] = useState('');
+  const [routineCategory, setRoutineCategory] = useState('routine');
+  const [routineRepeat, setRoutineRepeat] = useState('daily');
+
   useEffect(() => {
     const check = () => {
       const now = new Date();
       const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       reminders.filter(r => !r.completed && r.time === currentTime).forEach(r => {
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(r.title, { body: 'Time to take your medication' });
+          new Notification(r.title, { body: r.category === 'medication' ? 'Time to take your medication' : 'Reminder' });
         }
       });
     };
@@ -29,7 +36,7 @@ const MedicationsPage = () => {
     return () => clearInterval(interval);
   }, [reminders]);
 
-  const handleAdd = () => {
+  const handleAddMedication = () => {
     if (!name.trim()) return;
     addMedication({
       name: name.trim(), dosage: dosage.trim(), frequency, times,
@@ -53,6 +60,28 @@ const MedicationsPage = () => {
       new_value: { name, dosage, times },
     });
     setName(''); setDosage(''); setTimes(['08:00']); setPrescriber('');
+    setShowForm(false);
+  };
+
+  const handleAddRoutine = () => {
+    if (!routineTitle.trim() || !routineTime) return;
+    addReminder({
+      title: routineTitle.trim(),
+      time: routineTime,
+      date: new Date().toISOString().split('T')[0],
+      category: routineCategory,
+      repeat: routineRepeat === 'daily' || routineRepeat === 'weekly',
+      completed: false,
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'reminder_added',
+      target_type: 'reminder', target_id: '',
+      new_value: { title: routineTitle, time: routineTime, category: routineCategory },
+    });
+    setRoutineTitle(''); setRoutineTime(''); setRoutineCategory('routine');
     setShowForm(false);
   };
 
@@ -86,40 +115,75 @@ const MedicationsPage = () => {
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Medications & Reminders</h1>
-        <button onClick={() => setShowForm(!showForm)} className="p-3 rounded-full bg-lavender/20 hover:bg-lavender/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={showForm ? 'Close form' : 'Add medication'}>
+        <h1 className="text-2xl font-bold">Reminders</h1>
+        <button onClick={() => setShowForm(!showForm)} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label={showForm ? 'Close form' : 'Add reminder'}>
           {showForm ? <X size={22} /> : <Plus size={22} />}
         </button>
       </div>
 
       {showForm && (
         <GlassCard className="p-4 mb-4 animate-scale-in">
-          <h3 className="font-semibold mb-3">Add Medication</h3>
-          <div className="space-y-3">
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="Medication name" className="input-glass w-full" />
-            <input value={dosage} onChange={e => setDosage(e.target.value)} placeholder="Dosage (e.g., 10mg)" className="input-glass w-full" />
-            <select value={frequency} onChange={e => setFrequency(e.target.value)} className="input-glass w-full">
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="as_needed">As Needed</option>
-            </select>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Times</label>
-              {times.map((t, i) => (
-                <div key={i} className="flex gap-2 mb-2">
-                  <input type="time" value={t} onChange={e => setTimes(prev => prev.map((v, j) => j === i ? e.target.value : v))} className="input-glass flex-1" />
-                  {times.length > 1 && (
-                    <button onClick={() => setTimes(prev => prev.filter((_, j) => j !== i))} className="p-2 text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Remove time">
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button onClick={() => setTimes(prev => [...prev, '12:00'])} className="text-sm text-lavender hover:underline min-h-[44px]">+ Add time</button>
-            </div>
-            <input value={prescriber} onChange={e => setPrescriber(e.target.value)} placeholder="Prescriber" className="input-glass w-full" />
-            <button onClick={handleAdd} className="btn-primary w-full min-h-[48px]">Add Medication</button>
+          {/* Type toggle */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setFormType('medication')}
+              className={`flex-1 min-h-[44px] rounded-xl font-medium transition-colors ${formType === 'medication' ? 'bg-soft-pink/20 text-foreground' : 'text-muted-foreground'}`}
+            >
+              Medicine
+            </button>
+            <button
+              onClick={() => setFormType('routine')}
+              className={`flex-1 min-h-[44px] rounded-xl font-medium transition-colors ${formType === 'routine' ? 'bg-soft-pink/20 text-foreground' : 'text-muted-foreground'}`}
+            >
+              Routine
+            </button>
           </div>
+
+          {formType === 'medication' ? (
+            <div className="space-y-3">
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Medication name" className="input-glass w-full" />
+              <input value={dosage} onChange={e => setDosage(e.target.value)} placeholder="Dosage (e.g., 10mg)" className="input-glass w-full" />
+              <select value={frequency} onChange={e => setFrequency(e.target.value)} className="input-glass w-full">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="as_needed">As Needed</option>
+              </select>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Times</label>
+                {times.map((t, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input type="time" value={t} onChange={e => setTimes(prev => prev.map((v, j) => j === i ? e.target.value : v))} className="input-glass flex-1" />
+                    {times.length > 1 && (
+                      <button onClick={() => setTimes(prev => prev.filter((_, j) => j !== i))} className="p-2 text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Remove time">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => setTimes(prev => [...prev, '12:00'])} className="text-sm text-soft-pink hover:underline min-h-[44px]">+ Add time</button>
+              </div>
+              <input value={prescriber} onChange={e => setPrescriber(e.target.value)} placeholder="Prescriber" className="input-glass w-full" />
+              <button onClick={handleAddMedication} className="btn-primary w-full min-h-[48px]">Add Medication</button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <input value={routineTitle} onChange={e => setRoutineTitle(e.target.value)} placeholder="Reminder title" className="input-glass w-full" />
+              <select value={routineCategory} onChange={e => setRoutineCategory(e.target.value)} className="input-glass w-full">
+                <option value="routine">Daily Routine</option>
+                <option value="appointment">Appointment</option>
+                <option value="exercise">Exercise</option>
+                <option value="meal">Meal Time</option>
+                <option value="other">Other</option>
+              </select>
+              <input type="time" value={routineTime} onChange={e => setRoutineTime(e.target.value)} className="input-glass w-full" />
+              <select value={routineRepeat} onChange={e => setRoutineRepeat(e.target.value)} className="input-glass w-full">
+                <option value="once">Once</option>
+                <option value="daily">Every Day</option>
+                <option value="weekly">Every Week</option>
+              </select>
+              <button onClick={handleAddRoutine} className="btn-secondary w-full min-h-[48px]">Save Reminder</button>
+            </div>
+          )}
         </GlassCard>
       )}
 
@@ -130,13 +194,17 @@ const MedicationsPage = () => {
             {activeReminders.map(r => (
               <GlassCard key={r.id} className="p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Clock size={18} className="text-lavender" />
+                  {r.category === 'medication' ? (
+                    <Pill size={18} className="text-soft-pink" />
+                  ) : (
+                    <Calendar size={18} className="text-sky-blue" />
+                  )}
                   <div>
                     <p className="font-medium text-sm">{r.title}</p>
-                    <p className="text-xs text-muted-foreground">{r.time}</p>
+                    <p className="text-xs text-muted-foreground">{r.time} - {r.category}</p>
                   </div>
                 </div>
-                <button onClick={() => markComplete(r)} className="p-3 rounded-full hover:bg-mint/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Mark as taken">
+                <button onClick={() => markComplete(r)} className="p-3 rounded-full hover:bg-mint/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Mark as done">
                   <Check size={18} className="text-mint" />
                 </button>
               </GlassCard>
@@ -155,7 +223,7 @@ const MedicationsPage = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-semibold">{med.name}</h3>
-                  <p className="text-sm text-muted-foreground">{med.dosage} · {med.frequency}</p>
+                  <p className="text-sm text-muted-foreground">{med.dosage} - {med.frequency}</p>
                   <div className="flex gap-2 mt-1">
                     {med.times.map((t, i) => (
                       <span key={i} className="pill-badge text-xs">{t}</span>

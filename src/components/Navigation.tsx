@@ -24,7 +24,7 @@ const Navigation = () => {
               key={path}
               onClick={() => navigate(path)}
               className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors duration-200 min-w-[56px] min-h-[48px] ${
-                active ? 'bg-lavender/20 text-lavender' : 'text-muted-foreground hover:text-foreground'
+                active ? 'bg-soft-pink/20 text-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
               style={{ borderRadius: 'var(--radius-sm)' }}
               aria-label={label}

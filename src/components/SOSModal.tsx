@@ -4,10 +4,10 @@ import { Hospital, HelpCircle, ShieldAlert, Phone, CheckCircle } from 'lucide-re
 import { useState } from 'react';
 
 const emergencyTypes = [
-  { type: 'medical' as const, icon: Hospital, label: 'Medical', color: 'text-destructive' },
-  { type: 'lost' as const, icon: HelpCircle, label: 'Lost', color: 'text-sky-blue' },
-  { type: 'safety' as const, icon: ShieldAlert, label: 'Safety', color: 'text-lavender' },
-  { type: 'help' as const, icon: Phone, label: 'Help', color: 'text-mint' },
+  { type: 'medical' as const, icon: Hospital, label: 'Medical' },
+  { type: 'lost' as const, icon: HelpCircle, label: 'Lost' },
+  { type: 'safety' as const, icon: ShieldAlert, label: 'Safety' },
+  { type: 'help' as const, icon: Phone, label: 'Help' },
 ];
 
 interface SOSModalProps {
