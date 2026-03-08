@@ -20,6 +20,8 @@ const CameraPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
+  const [memoryHashesByPerson, setMemoryHashesByPerson] = useState<Record<string, string[]>>({});
+  const [hashingMemoryPhotos, setHashingMemoryPhotos] = useState(false);
 
   useEffect(() => {
     return () => {
