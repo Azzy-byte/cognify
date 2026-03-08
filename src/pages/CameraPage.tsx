@@ -86,22 +86,25 @@ const CameraPage = () => {
           .map(result => result.value);
       }
 
-      // Build recognisable people directly from memory tags (works even if People list is empty)
+      // Build recognisable people directly from memory tags/text (works even if People list is empty)
       for (const memory of memories) {
-        if (!memory.image_urls.length || !memory.people.length) continue;
-        for (const rawName of memory.people) {
+        if (!memory.image_urls.length) continue;
+        const memoryNames = getMemoryNames(memory);
+        if (!memoryNames.length) continue;
+
+        const hashResults = await Promise.allSettled(
+          [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
+        );
+        const memoryHashes = hashResults
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+          .map(result => result.value);
+
+        for (const rawName of memoryNames) {
           const trimmedName = rawName.trim();
           if (!trimmedName) continue;
           const key = trimmedName.toLowerCase();
           const existing = derivedByName.get(key);
           const existingHashes = existing?.photo_hashes ?? [];
-
-          const hashResults = await Promise.allSettled(
-            [...new Set(memory.image_urls)].slice(0, 8).map(url => generatePerceptualHash(url))
-          );
-          const memoryHashes = hashResults
-            .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-            .map(result => result.value);
 
           derivedByName.set(key, {
             id: `memory-${key.replace(/\s+/g, '-')}`,
