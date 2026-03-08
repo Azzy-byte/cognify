@@ -2,9 +2,13 @@ import { useState, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import BrainCharacter from '@/components/BrainCharacter';
-import UserSwitcher from '@/components/UserSwitcher';
-import { Send, Mic, MicOff, ImagePlus, Save, X } from 'lucide-react';
+import { Send, Mic, MicOff, ImagePlus, Save, X, Play, Square } from 'lucide-react';
 import type { ChatMessage } from '@/types';
+
+interface AudioRecording {
+  url: string;
+  blob: Blob;
+}
 
 const ChatPage = () => {
   const { currentUser, people, addMemory, addAuditEntry } = useApp();
@@ -13,14 +17,21 @@ const ChatPage = () => {
   const [images, setImages] = useState<string[]>([]);
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [audioRecordings, setAudioRecordings] = useState<AudioRecording[]>([]);
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSend = useCallback(() => {
-    if (!input.trim() && images.length === 0) return;
-    const userMsg: ChatMessage = { role: 'user', text: input, image_urls: images.length > 0 ? [...images] : undefined };
+    if (!input.trim() && images.length === 0 && audioRecordings.length === 0) return;
+
+    const userMsg: ChatMessage = {
+      role: 'user',
+      text: input,
+      image_urls: images.length > 0 ? [...images] : undefined,
+    };
     const newMessages = [...messages, userMsg];
 
     const mentionedPeople = people.filter(p => input.toLowerCase().includes(p.name.toLowerCase()));
@@ -28,13 +39,17 @@ const ChatPage = () => {
     if (mentionedPeople.length > 0) {
       response += `I notice you mentioned ${mentionedPeople.map(p => `${p.name} (${p.relationship})`).join(', ')}. `;
     }
+    if (audioRecordings.length > 0) {
+      response += `I received your ${audioRecordings.length} audio recording(s). `;
+    }
     response += "Tell me more about your day!";
 
     const assistantMsg: ChatMessage = { role: 'assistant', text: response };
     setMessages([...newMessages, assistantMsg]);
     setInput('');
     setImages([]);
-  }, [input, images, messages, people]);
+    setAudioRecordings([]);
+  }, [input, images, messages, people, audioRecordings]);
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -48,11 +63,11 @@ const ChatPage = () => {
     e.target.value = '';
   };
 
-  // Voice recording - called directly from button click (user gesture)
   const toggleVoice = useCallback(async () => {
     if (recording) {
       // Stop recording
       recognitionRef.current?.stop();
+      recognitionRef.current = null;
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
@@ -61,7 +76,7 @@ const ChatPage = () => {
     }
 
     try {
-      // Request microphone - must be in direct click handler
+      // CRITICAL: getUserMedia called directly in click handler
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -70,7 +85,9 @@ const ChatPage = () => {
         }
       });
 
-      // Set up MediaRecorder for audio capture
+      streamRef.current = stream;
+
+      // Set up MediaRecorder for audio capture & saving
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
       const recorder = new MediaRecorder(stream, { mimeType });
       audioChunksRef.current = [];
@@ -80,7 +97,16 @@ const ChatPage = () => {
       };
 
       recorder.onstop = () => {
+        // Create audio blob and save it
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          setAudioRecordings(prev => [...prev, { url, blob }]);
+        }
+        audioChunksRef.current = [];
+        // Stop all tracks
         stream.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
       };
 
       mediaRecorderRef.current = recorder;
@@ -101,10 +127,7 @@ const ChatPage = () => {
           setInput(transcript);
         };
         recognition.onerror = () => {
-          setRecording(false);
-        };
-        recognition.onend = () => {
-          // Don't set recording false here - let the stop button handle it
+          // Don't stop recording on speech recognition error - audio still records
         };
         recognition.start();
         recognitionRef.current = recognition;
@@ -120,6 +143,14 @@ const ChatPage = () => {
       setRecording(false);
     }
   }, [recording]);
+
+  const removeAudio = (index: number) => {
+    setAudioRecordings(prev => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const saveMemory = () => {
     if (messages.length < 2) return;
@@ -152,10 +183,6 @@ const ChatPage = () => {
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
-      <div className="flex items-center justify-end mb-4">
-        <UserSwitcher />
-      </div>
-
       <div className="space-y-4 mb-4">
         {messages.length === 0 && (
           <BrainCharacter userName={currentUser.name} />
@@ -197,6 +224,20 @@ const ChatPage = () => {
         </div>
       )}
 
+      {audioRecordings.length > 0 && (
+        <div className="flex flex-col gap-2 mb-3 animate-fade-in">
+          {audioRecordings.map((rec, i) => (
+            <div key={i} className="flex items-center gap-2 glass-card px-3 py-2">
+              <Play size={16} className="text-soft-pink" />
+              <audio src={rec.url} controls className="flex-1 h-8" style={{ maxWidth: '100%' }} />
+              <button onClick={() => removeAudio(i)} className="w-6 h-6 rounded-full bg-destructive flex items-center justify-center" aria-label="Remove audio">
+                <X size={12} className="text-destructive-foreground" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {recording && (
         <div className="flex items-center gap-2 mb-3 animate-fade-in">
           <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
@@ -210,7 +251,7 @@ const ChatPage = () => {
           <ImagePlus size={22} className="text-muted-foreground" />
         </button>
         <button onClick={toggleVoice} className={`p-3 rounded-full transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center ${recording ? 'bg-destructive/20 text-destructive' : 'hover:bg-soft-pink/20 text-muted-foreground'}`} aria-label={recording ? 'Stop recording' : 'Start voice input'}>
-          {recording ? <MicOff size={22} /> : <Mic size={22} />}
+          {recording ? <Square size={22} /> : <Mic size={22} />}
         </button>
         <input
           value={input}
