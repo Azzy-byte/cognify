@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Search, Play, Pause, X, Pencil, Trash2 } from 'lucide-react';
+import { Search, X, Pencil, Trash2, Plus } from 'lucide-react';
 import type { Memory } from '@/types';
 
 const categories = ['All', 'Family', 'Social', 'Health', 'General'] as const;
@@ -17,17 +17,17 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(days / 30)} months ago`;
 }
 
-function conversationToNarrative(conversation: { role: string; text: string }[]): string {
-  return conversation.filter(m => m.role === 'user').map(m => m.text).join('. ') + '.';
-}
-
 const MemoriesPage = () => {
-  const { memories, currentUser, canEdit, addAuditEntry } = useApp();
+  const { memories, currentUser, canEdit, addMemory, updateMemory, deleteMemory, addAuditEntry } = useApp();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('All');
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formSummary, setFormSummary] = useState('');
+  const [formCategory, setFormCategory] = useState<Memory['category']>('general');
+  const [formPeople, setFormPeople] = useState('');
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -41,11 +41,66 @@ const MemoriesPage = () => {
     return true;
   }), [memories, category, debouncedSearch]);
 
+  const handleAdd = () => {
+    if (!formSummary.trim()) return;
+    addMemory({
+      conversation: [],
+      summary: formSummary.trim(),
+      image_urls: [],
+      people: formPeople.split(',').map(p => p.trim()).filter(Boolean),
+      category: formCategory,
+      created_by: currentUser.id,
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'memory_created',
+      target_type: 'memory',
+      target_id: '',
+      new_value: { summary: formSummary },
+    });
+    setFormSummary('');
+    setFormPeople('');
+    setFormCategory('general');
+    setShowAdd(false);
+  };
+
+  const startEdit = (m: Memory) => {
+    setEditingId(m.id);
+    setFormSummary(m.summary);
+    setFormCategory(m.category);
+    setFormPeople(m.people.join(', '));
+    setSelectedMemory(null);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !formSummary.trim()) return;
+    updateMemory(editingId, {
+      summary: formSummary.trim(),
+      category: formCategory,
+      people: formPeople.split(',').map(p => p.trim()).filter(Boolean),
+      updated_by: currentUser.id,
+    });
+    addAuditEntry({
+      timestamp: new Date().toISOString(),
+      actor_id: currentUser.id,
+      actor_name: `${currentUser.name} (${currentUser.role})`,
+      action_type: 'memory_updated',
+      target_type: 'memory',
+      target_id: editingId,
+    });
+    setEditingId(null);
+    setFormSummary('');
+    setFormPeople('');
+  };
+
   const handleDelete = useCallback((memoryId: string) => {
     if (confirmDelete !== memoryId) {
       setConfirmDelete(memoryId);
       return;
     }
+    deleteMemory(memoryId);
     addAuditEntry({
       timestamp: new Date().toISOString(),
       actor_id: currentUser.id,
@@ -56,11 +111,39 @@ const MemoriesPage = () => {
     });
     setConfirmDelete(null);
     setSelectedMemory(null);
-  }, [confirmDelete, currentUser, addAuditEntry]);
+  }, [confirmDelete, currentUser, addAuditEntry, deleteMemory]);
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
-      <h1 className="text-2xl font-bold mb-4">Memories</h1>
+    <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold">Memories</h1>
+        <button onClick={() => { setShowAdd(!showAdd); setEditingId(null); }} className="p-3 rounded-full bg-soft-pink/20 hover:bg-soft-pink/30 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Add memory">
+          {showAdd ? <X size={22} /> : <Plus size={22} />}
+        </button>
+      </div>
+
+      {/* Add / Edit form */}
+      {(showAdd || editingId) && (
+        <GlassCard className="p-4 mb-4 animate-scale-in">
+          <h3 className="font-semibold mb-3">{editingId ? 'Edit Memory' : 'Add Memory'}</h3>
+          <div className="space-y-3">
+            <textarea value={formSummary} onChange={e => setFormSummary(e.target.value)} placeholder="What happened?" className="input-glass w-full min-h-[80px] resize-none" />
+            <input value={formPeople} onChange={e => setFormPeople(e.target.value)} placeholder="People involved (comma separated)" className="input-glass w-full" />
+            <select value={formCategory} onChange={e => setFormCategory(e.target.value as Memory['category'])} className="input-glass w-full">
+              <option value="general">General</option>
+              <option value="family">Family</option>
+              <option value="social">Social</option>
+              <option value="health">Health</option>
+            </select>
+            <button onClick={editingId ? saveEdit : handleAdd} className="btn-primary w-full min-h-[48px]">
+              {editingId ? 'Save Changes' : 'Add Memory'}
+            </button>
+            {editingId && (
+              <button onClick={() => { setEditingId(null); setFormSummary(''); setFormPeople(''); }} className="w-full text-sm text-muted-foreground min-h-[44px]">Cancel</button>
+            )}
+          </div>
+        </GlassCard>
+      )}
 
       <GlassCard className="p-3 flex items-center gap-2 mb-4">
         <Search size={20} className="text-muted-foreground" />
@@ -81,62 +164,22 @@ const MemoriesPage = () => {
       </div>
 
       {filtered.length === 0 ? (
-        <GlassCard className="p-8 text-center"><p className="text-muted-foreground">No memories found</p></GlassCard>
+        <GlassCard className="p-8 text-center"><p className="text-muted-foreground">No memories yet. Add your first one!</p></GlassCard>
       ) : (
-        <div className="columns-1 sm:columns-2 gap-4 space-y-4">
+        <div className="space-y-3">
           {filtered.map(memory => (
-            <div key={memory.id} className="break-inside-avoid" onClick={() => setSelectedMemory(memory)}>
-              <div className="glass-card-hover overflow-hidden cursor-pointer">
-                {/* Photo with gradient overlay */}
-                {memory.image_urls.length > 0 ? (
-                  <div className="relative">
-                    <img
-                      src={memory.image_urls[0]}
-                      alt={memory.summary}
-                      className="w-full aspect-video object-cover"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(45,55,72,0.7) 100%)' }} />
-                    <p className="absolute bottom-3 left-3 right-3 text-white font-medium text-sm line-clamp-2">
-                      {memory.summary}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="p-4 pb-2">
-                    <p className="font-medium line-clamp-3">{memory.summary}</p>
-                  </div>
-                )}
-
-                {/* Audio player */}
-                {memory.audio_url && (
-                  <div className="px-4 py-2 flex items-center gap-2 border-t border-border">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setPlayingAudio(playingAudio === memory.id ? null : memory.id); }}
-                      className="p-2 rounded-full bg-soft-pink/20 min-w-[40px] min-h-[40px] flex items-center justify-center"
-                      aria-label={playingAudio === memory.id ? 'Pause audio' : 'Play audio'}
-                    >
-                      {playingAudio === memory.id ? <Pause size={16} /> : <Play size={16} />}
-                    </button>
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-soft-pink/40 rounded-full" style={{ width: '0%' }} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Tags & metadata */}
-                <div className="p-4 pt-2">
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {memory.people.map(p => (
-                      <span key={p} className="pill-badge text-xs">{p}</span>
-                    ))}
-                  </div>
-                  <div className="flex justify-between items-center text-xs text-muted-foreground">
-                    <span className="pill-badge">{memory.category}</span>
-                    <span>{timeAgo(memory.created_at)}</span>
-                  </div>
-                </div>
+            <GlassCard key={memory.id} className="p-4 cursor-pointer glass-card-hover" onClick={() => setSelectedMemory(memory)}>
+              <p className="font-medium line-clamp-2">{memory.summary}</p>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {memory.people.map(p => (
+                  <span key={p} className="pill-badge text-xs">{p}</span>
+                ))}
               </div>
-            </div>
+              <div className="flex justify-between items-center text-xs text-muted-foreground mt-2">
+                <span className="pill-badge">{memory.category}</span>
+                <span>{timeAgo(memory.created_at)}</span>
+              </div>
+            </GlassCard>
           ))}
         </div>
       )}
@@ -150,55 +193,25 @@ const MemoriesPage = () => {
               <X size={20} />
             </button>
 
-            {/* Photo gallery */}
-            {selectedMemory.image_urls.length > 0 && (
-              <div className={`gap-2 mb-4 ${selectedMemory.image_urls.length > 1 ? 'grid grid-cols-2' : ''}`}>
-                {selectedMemory.image_urls.map((url, i) => (
-                  <img key={i} src={url} alt={`Memory photo ${i + 1}`} className="w-full h-48 object-cover" style={{ borderRadius: 'var(--radius-md)' }} loading="lazy" />
-                ))}
-              </div>
-            )}
+            <h3 className="text-lg font-bold mb-2 pr-10">{selectedMemory.summary}</h3>
 
-            {/* Audio player */}
-            {selectedMemory.audio_url && (
-              <div className="flex items-center gap-3 mb-4 p-3 bg-muted/30 rounded-xl">
-                <button className="p-3 rounded-full bg-soft-pink/20 min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Play audio">
-                  <Play size={20} />
-                </button>
-                <div className="flex-1">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-soft-pink/40 rounded-full" style={{ width: '0%' }} />
-                  </div>
-                  {selectedMemory.transcription && (
-                    <p className="text-sm text-muted-foreground mt-2 italic">"{selectedMemory.transcription}"</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Summary */}
-            <h3 className="text-lg font-bold mb-2">{selectedMemory.summary}</h3>
-
-            {/* Narrative from conversation */}
             {selectedMemory.conversation.length > 0 && (
               <div className="mb-4 p-3 bg-muted/20 rounded-xl">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {conversationToNarrative(selectedMemory.conversation)}
+                  {selectedMemory.conversation.filter(m => m.role === 'user').map(m => m.text).join('. ')}.
                 </p>
               </div>
             )}
 
-            {/* People & metadata */}
             <div className="flex flex-wrap gap-2 mb-4">
               {selectedMemory.people.map(p => <span key={p} className="pill-badge">{p}</span>)}
               <span className="pill-badge">{selectedMemory.category}</span>
               <span className="pill-badge">{timeAgo(selectedMemory.created_at)}</span>
             </div>
 
-            {/* Actions */}
             {canEdit(selectedMemory.created_by) && (
               <div className="flex gap-2">
-                <button className="btn-primary flex-1 flex items-center justify-center gap-2 min-h-[48px]">
+                <button onClick={() => startEdit(selectedMemory)} className="btn-primary flex-1 flex items-center justify-center gap-2 min-h-[48px]">
                   <Pencil size={16} /> Edit
                 </button>
                 <button

@@ -9,10 +9,11 @@ const SOSButton = () => {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 z-50 w-16 h-16 rounded-full bg-destructive flex items-center justify-center shadow-lg sos-pulse transition-transform duration-200 hover:translateY-[-2px]"
+        className="fixed z-[60] w-14 h-14 rounded-full bg-destructive flex items-center justify-center shadow-lg sos-pulse"
+        style={{ bottom: '5.5rem', right: '1rem' }}
         aria-label="SOS Emergency"
       >
-        <AlertTriangle size={28} className="text-destructive-foreground" />
+        <AlertTriangle size={24} className="text-destructive-foreground" />
       </button>
       <SOSModal open={open} onClose={() => setOpen(false)} />
     </>

@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useApp } from '@/store/AppContext';
 import GlassCard from '@/components/GlassCard';
 import BrainCharacter from '@/components/BrainCharacter';
-import { Send, Mic, MicOff, ImagePlus, Save, X, Play, Square } from 'lucide-react';
+import { Send, Mic, ImagePlus, Save, X, Play, Square } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 
 interface AudioRecording {
@@ -18,7 +18,6 @@ const ChatPage = () => {
   const [recording, setRecording] = useState(false);
   const [saved, setSaved] = useState(false);
   const [audioRecordings, setAudioRecordings] = useState<AudioRecording[]>([]);
-  const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -65,9 +64,6 @@ const ChatPage = () => {
 
   const toggleVoice = useCallback(async () => {
     if (recording) {
-      // Stop recording
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
@@ -76,18 +72,11 @@ const ChatPage = () => {
     }
 
     try {
-      // CRITICAL: getUserMedia called directly in click handler
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
 
       streamRef.current = stream;
-
-      // Set up MediaRecorder for audio capture & saving
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
       const recorder = new MediaRecorder(stream, { mimeType });
       audioChunksRef.current = [];
@@ -97,42 +86,18 @@ const ChatPage = () => {
       };
 
       recorder.onstop = () => {
-        // Create audio blob and save it
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         if (blob.size > 0) {
           const url = URL.createObjectURL(blob);
           setAudioRecordings(prev => [...prev, { url, blob }]);
         }
         audioChunksRef.current = [];
-        // Stop all tracks
         stream.getTracks().forEach(t => t.stop());
         streamRef.current = null;
       };
 
       mediaRecorderRef.current = recorder;
       recorder.start(1000);
-
-      // Set up SpeechRecognition for live transcription
-      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SR) {
-        const recognition = new SR();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-        recognition.onresult = (e: any) => {
-          let transcript = '';
-          for (let i = 0; i < e.results.length; i++) {
-            transcript += e.results[i][0].transcript;
-          }
-          setInput(transcript);
-        };
-        recognition.onerror = () => {
-          // Don't stop recording on speech recognition error - audio still records
-        };
-        recognition.start();
-        recognitionRef.current = recognition;
-      }
-
       setRecording(true);
     } catch (err) {
       if (err instanceof Error && err.name === 'NotAllowedError') {
@@ -182,7 +147,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4 pb-36">
+    <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
       <div className="space-y-4 mb-4">
         {messages.length === 0 && (
           <BrainCharacter userName={currentUser.name} />
@@ -241,7 +206,7 @@ const ChatPage = () => {
       {recording && (
         <div className="flex items-center gap-2 mb-3 animate-fade-in">
           <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
-          <span className="text-sm text-muted-foreground">Recording... speak now</span>
+          <span className="text-sm text-muted-foreground">Recording audio...</span>
         </div>
       )}
 
@@ -250,7 +215,7 @@ const ChatPage = () => {
         <button onClick={() => fileRef.current?.click()} className="p-3 rounded-full hover:bg-soft-pink/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center" aria-label="Add images">
           <ImagePlus size={22} className="text-muted-foreground" />
         </button>
-        <button onClick={toggleVoice} className={`p-3 rounded-full transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center ${recording ? 'bg-destructive/20 text-destructive' : 'hover:bg-soft-pink/20 text-muted-foreground'}`} aria-label={recording ? 'Stop recording' : 'Start voice input'}>
+        <button onClick={toggleVoice} className={`p-3 rounded-full transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center ${recording ? 'bg-destructive/20 text-destructive' : 'hover:bg-soft-pink/20 text-muted-foreground'}`} aria-label={recording ? 'Stop recording' : 'Start voice recording'}>
           {recording ? <Square size={22} /> : <Mic size={22} />}
         </button>
         <input

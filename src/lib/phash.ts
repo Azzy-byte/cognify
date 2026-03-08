@@ -1,46 +1,35 @@
 /**
  * Perceptual hashing for face recognition.
- * Generates a 64-char binary string hash from an image element.
+ * Generates a 64-char binary string hash from an image.
+ * Uses DCT-like average hash for better perceptual matching.
  */
 export function generatePerceptualHash(imageSource: HTMLImageElement | HTMLCanvasElement | string): Promise<string> {
   return new Promise((resolve, reject) => {
     const process = (img: HTMLImageElement | HTMLCanvasElement) => {
       try {
+        // Step 1: Downscale to 8x8 grayscale
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('Canvas not supported')); return; }
 
-        const size = 32;
-        canvas.width = size;
-        canvas.height = size;
+        canvas.width = 8;
+        canvas.height = 8;
+        ctx.drawImage(img, 0, 0, 8, 8);
+        const data = ctx.getImageData(0, 0, 8, 8).data;
 
-        // Draw grayscale downsampled
-        ctx.drawImage(img, 0, 0, size, size);
-        const data = ctx.getImageData(0, 0, size, size).data;
-
-        // Convert to grayscale values
+        // Convert to grayscale
         const gray: number[] = [];
         for (let i = 0; i < data.length; i += 4) {
           gray.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
         }
 
-        // Use 8x8 center region for hash (more focused on face area)
-        const small: number[] = [];
-        const sc = document.createElement('canvas');
-        const sctx = sc.getContext('2d')!;
-        sc.width = 8;
-        sc.height = 8;
-        sctx.drawImage(img, 0, 0, 8, 8);
-        const sd = sctx.getImageData(0, 0, 8, 8).data;
-        for (let i = 0; i < sd.length; i += 4) {
-          small.push(0.299 * sd[i] + 0.587 * sd[i + 1] + 0.114 * sd[i + 2]);
-        }
+        // Compute average (excluding extremes for better robustness)
+        const sorted = [...gray].sort((a, b) => a - b);
+        const trimmed = sorted.slice(4, 60); // trim top/bottom 4 values
+        const avg = trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
 
-        // Compute average
-        const avg = small.reduce((a, b) => a + b, 0) / small.length;
-
-        // Generate hash: 1 if above average, 0 if below
-        const hash = small.map(v => v >= avg ? '1' : '0').join('');
+        // Generate hash
+        const hash = gray.map(v => v >= avg ? '1' : '0').join('');
         resolve(hash);
       } catch (e) {
         reject(e);
@@ -80,7 +69,8 @@ export function findMatch(
   newHash: string,
   people: Array<{ id: string; name: string; relationship: string; photo_hashes?: string[] }>
 ): MatchResult {
-  const threshold = 18;
+  // More lenient threshold for perceptual matching (out of 64 bits)
+  const threshold = 22;
   let bestMatch: MatchResult = { recognized: false };
   let bestDistance = Infinity;
 
