@@ -10,6 +10,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   text: string;
   image_urls?: string[];
+  audio_urls?: string[];
 }
 
 export interface Memory {

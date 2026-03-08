@@ -44,6 +44,39 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)}km away`;
 }
 
+function detectCircularMovement(points: Array<{ lat: number; lng: number; at: number }>): boolean {
+  if (points.length < 8) return false;
+
+  const centroid = points.reduce(
+    (acc, point) => ({ lat: acc.lat + point.lat / points.length, lng: acc.lng + point.lng / points.length }),
+    { lat: 0, lng: 0 }
+  );
+
+  const radii = points.map(p => getDistance(p.lat, p.lng, centroid.lat, centroid.lng));
+  const avgRadius = radii.reduce((sum, radius) => sum + radius, 0) / radii.length;
+  if (avgRadius < 20 || avgRadius > 180) return false;
+
+  const variance = radii.reduce((sum, radius) => sum + (radius - avgRadius) ** 2, 0) / radii.length;
+  const stdDev = Math.sqrt(variance);
+
+  let pathLength = 0;
+  for (let i = 1; i < points.length; i++) {
+    pathLength += getDistance(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+  }
+
+  const netDistance = getDistance(
+    points[0].lat,
+    points[0].lng,
+    points[points.length - 1].lat,
+    points[points.length - 1].lng
+  );
+
+  const consistentRadius = stdDev / avgRadius < 0.35;
+  const loopingPattern = pathLength > avgRadius * 4 && netDistance < avgRadius * 1.8;
+
+  return consistentRadius && loopingPattern;
+}
+
 // Component to handle map clicks for adding pins
 function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   useMapEvents({
@@ -54,23 +87,47 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null;
 }
 
-const LostBanner = ({ closestZone, distance, onSOS }: { closestZone: string; distance: number; onSOS: () => void }) => (
+const LostBanner = ({
+  closestZone,
+  distance,
+  reason,
+  onSOS,
+  onDirections,
+  onDismiss,
+}: {
+  closestZone: string;
+  distance: number;
+  reason: string;
+  onSOS: () => void;
+  onDirections: () => void;
+  onDismiss: () => void;
+}) => (
   <div className="fixed top-0 left-0 right-0 z-[80] animate-fade-in">
     <div className="max-w-lg mx-auto px-4 pt-14">
-      <div className="bg-destructive/95 backdrop-blur-sm text-destructive-foreground p-4 flex items-center gap-3" style={{ borderRadius: 'var(--radius-md)' }}>
-        <AlertTriangle size={24} className="shrink-0" />
-        <div className="flex-1">
-          <p className="font-semibold text-sm">Are you lost?</p>
-          <p className="text-xs opacity-90">
-            You are {formatDistance(distance)} from {closestZone}
-          </p>
+      <div className="bg-destructive/95 backdrop-blur-sm text-destructive-foreground p-4" style={{ borderRadius: 'var(--radius-md)' }}>
+        <div className="flex items-start gap-3">
+          <AlertTriangle size={24} className="shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">Are you lost?</p>
+            <p className="text-xs opacity-90">You are {formatDistance(distance)} from {closestZone}</p>
+            <p className="text-xs opacity-80 mt-1">Detected: {reason}</p>
+          </div>
+          <button onClick={onDismiss} className="text-destructive-foreground/80 hover:text-destructive-foreground min-h-[36px] px-2" aria-label="Dismiss">✕</button>
         </div>
-        <button
-          onClick={onSOS}
-          className="px-4 py-2 bg-destructive-foreground text-destructive font-bold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
-        >
-          SOS
-        </button>
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            onClick={onSOS}
+            className="px-3 py-2 bg-destructive-foreground text-destructive font-bold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
+          >
+            Press SOS
+          </button>
+          <button
+            onClick={onDirections}
+            className="px-3 py-2 bg-card/90 text-foreground font-semibold rounded-xl text-sm min-h-[44px] active:scale-95 transition-transform"
+          >
+            Show Way Home
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -90,10 +147,13 @@ const MapPage = () => {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [isLost, setIsLost] = useState(false);
-  const [lostInfo, setLostInfo] = useState<{ zone: string; distance: number } | null>(null);
+  const [lostInfo, setLostInfo] = useState<{ zone: string; distance: number; reason: string } | null>(null);
   const [showNavHome, setShowNavHome] = useState(false);
   const watchRef = useRef<number | null>(null);
   const lostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const movementHistoryRef = useRef<Array<{ lat: number; lng: number; at: number }>>([]);
+  const outsideHomeSinceRef = useRef<number | null>(null);
+  const lostSnoozedUntilRef = useRef<number>(0);
 
   useEffect(() => {
     navigator.geolocation?.getCurrentPosition(
@@ -106,36 +166,64 @@ const MapPage = () => {
     );
   }, []);
 
-  // Check if user is outside all safe zones
+  // Life360-style lost detection: distance, prolonged drift, and circular movement
   const checkLostStatus = useCallback((loc: { lat: number; lng: number }) => {
     if (safeZones.length === 0) return;
+
+    const now = Date.now();
+    movementHistoryRef.current = [...movementHistoryRef.current, { ...loc, at: now }].filter(p => now - p.at < 10 * 60 * 1000).slice(-20);
 
     let inAnyZone = false;
     let closestZone = safeZones[0];
     let minDist = Infinity;
 
-    for (const z of safeZones) {
-      const d = getDistance(loc.lat, loc.lng, z.lat, z.lng);
-      if (d < minDist) { minDist = d; closestZone = z; }
-      if (d <= z.radius_meters) { inAnyZone = true; }
+    for (const zone of safeZones) {
+      const distance = getDistance(loc.lat, loc.lng, zone.lat, zone.lng);
+      if (distance < minDist) {
+        minDist = distance;
+        closestZone = zone;
+      }
+      if (distance <= zone.radius_meters) inAnyZone = true;
     }
 
-    if (!inAnyZone && minDist > 200) {
-      setIsLost(true);
-      setLostInfo({ zone: closestZone.name, distance: minDist });
+    const homeZone = safeZones.find(z => z.name.toLowerCase().includes('home')) || safeZones[0];
+    const homeDistance = getDistance(loc.lat, loc.lng, homeZone.lat, homeZone.lng);
+    const homeThreshold = Math.max(homeZone.radius_meters + 250, 450);
+    const farFromHome = homeDistance > homeThreshold;
 
-      // Browser notification
+    if (farFromHome) {
+      if (!outsideHomeSinceRef.current) outsideHomeSinceRef.current = now;
+    } else {
+      outsideHomeSinceRef.current = null;
+    }
+
+    const awayForLong = !!outsideHomeSinceRef.current && now - outsideHomeSinceRef.current > 3 * 60 * 1000;
+    const movingInCircles = detectCircularMovement(movementHistoryRef.current);
+
+    let reason = '';
+    if (!inAnyZone && minDist > 300) {
+      reason = 'outside your safe zones';
+    } else if (awayForLong) {
+      reason = 'far from home for several minutes';
+    } else if (movingInCircles) {
+      reason = 'repeated circular movement';
+    }
+
+    if (reason && now >= lostSnoozedUntilRef.current) {
+      setIsLost(true);
+      setLostInfo({ zone: closestZone.name, distance: minDist, reason });
+
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Are you lost?', {
-          body: `You are ${formatDistance(minDist)} from ${closestZone.name}. Tap to get help.`,
+          body: `Detected ${reason}. You are ${formatDistance(minDist)} from ${closestZone.name}.`,
           tag: 'lost-detection',
         });
       }
-    } else {
-      setIsLost(false);
-      setLostInfo(null);
-      setShowNavHome(false);
+      return;
     }
+
+    setIsLost(false);
+    setLostInfo(null);
   }, [safeZones]);
 
   const startTracking = useCallback(() => {
@@ -173,6 +261,11 @@ const MapPage = () => {
       if (lostTimerRef.current) clearTimeout(lostTimerRef.current);
     };
   }, []);
+
+  const handleShowDirections = () => {
+    setShowNavHome(true);
+    setIsLost(false);
+  };
 
   const handleSOS = () => {
     if (!currentPos) return;
@@ -242,7 +335,17 @@ const MapPage = () => {
     <div className="max-w-lg mx-auto px-4 pt-12 pb-36">
       {/* Lost detection banner */}
       {isLost && lostInfo && (
-        <LostBanner closestZone={lostInfo.zone} distance={lostInfo.distance} onSOS={handleSOS} />
+        <LostBanner
+          closestZone={lostInfo.zone}
+          distance={lostInfo.distance}
+          reason={lostInfo.reason}
+          onSOS={handleSOS}
+          onDirections={handleShowDirections}
+          onDismiss={() => {
+            setIsLost(false);
+            lostSnoozedUntilRef.current = Date.now() + 5 * 60 * 1000;
+          }}
+        />
       )}
 
       {/* Navigate home overlay */}

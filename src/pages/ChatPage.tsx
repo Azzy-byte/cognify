@@ -9,7 +9,7 @@ import type { ChatMessage } from '@/types';
 
 interface AudioRecording {
   url: string;
-  blob: Blob;
+  dataUrl: string;
 }
 
 const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
@@ -51,6 +51,13 @@ const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
             ))}
           </div>
         )}
+        {msg.audio_urls && msg.audio_urls.length > 0 && (
+          <div className="space-y-2 mt-2">
+            {msg.audio_urls.map((url, j) => (
+              <audio key={j} src={url} controls className="w-full h-8" />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -67,7 +74,7 @@ const TypingIndicator = () => (
 );
 
 const ChatPage = () => {
-  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addAuditEntry } = useApp();
+  const { currentUser, people, memories, medications, reminders, contacts, safeZones, addMemory, addReminder, addAuditEntry } = useApp();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -93,6 +100,7 @@ const ChatPage = () => {
       role: 'user',
       text: input,
       image_urls: images.length > 0 ? [...images] : undefined,
+      audio_urls: audioRecordings.length > 0 ? audioRecordings.map(r => r.dataUrl) : undefined,
     };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -117,16 +125,41 @@ const ChatPage = () => {
       setMessages([...newMessages, assistantMsg]);
       setTyping(false);
 
-      // Handle navigation actions
+      // Handle assistant actions
       if (response.action?.type === 'navigate' && response.action.payload?.path) {
         setTimeout(() => {
           navigate(response.action!.payload!.path as string);
-        }, 1500);
+        }, 900);
+      }
+
+      if (response.action?.type === 'add_reminder') {
+        const title = String(response.action.payload?.title || '').trim();
+        const time = String(response.action.payload?.time || '').trim();
+        if (title && time) {
+          addReminder({
+            title,
+            time,
+            date: new Date().toISOString().split('T')[0],
+            category: 'routine',
+            repeat: true,
+            completed: false,
+          });
+          addAuditEntry({
+            timestamp: new Date().toISOString(),
+            actor_id: currentUser.id,
+            actor_name: `${currentUser.name} (${currentUser.role})`,
+            action_type: 'reminder_created_via_chat',
+            target_type: 'reminder',
+            target_id: '',
+            new_value: { title, time },
+          });
+        }
       }
     }, 600 + Math.random() * 400);
 
+    audioRecordings.forEach(recordingItem => URL.revokeObjectURL(recordingItem.url));
     setAudioRecordings([]);
-  }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate]);
+  }, [input, images, messages, people, audioRecordings, currentUser, memories, medications, reminders, contacts, safeZones, navigate, addReminder, addAuditEntry]);
 
   const handleImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -167,7 +200,16 @@ const ChatPage = () => {
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         if (blob.size > 0) {
           const url = URL.createObjectURL(blob);
-          setAudioRecordings(prev => [...prev, { url, blob }]);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+            if (dataUrl) {
+              setAudioRecordings(prev => [...prev, { url, dataUrl }]);
+            } else {
+              URL.revokeObjectURL(url);
+            }
+          };
+          reader.readAsDataURL(blob);
         }
         audioChunksRef.current = [];
         stream.getTracks().forEach(t => t.stop());
@@ -202,7 +244,7 @@ const ChatPage = () => {
     );
     const summary = messages.filter(m => m.role === 'user').map(m => m.text).join('. ').slice(0, 200);
     const allImages = messages.flatMap(m => m.image_urls || []).concat(images);
-    const allAudioUrls = audioRecordings.map(r => r.url);
+    const allAudioUrls = messages.flatMap(m => m.audio_urls || []);
 
     addMemory({
       conversation: messages,
@@ -223,7 +265,10 @@ const ChatPage = () => {
       new_value: { summary },
     });
     setSaved(true);
-    setTimeout(() => { setMessages([]); setSaved(false); }, 1500);
+    setTimeout(() => {
+      setMessages([]);
+      setSaved(false);
+    }, 1500);
   };
 
   const quickActions = [

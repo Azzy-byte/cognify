@@ -20,6 +20,8 @@ const CameraPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [confirmDeletePerson, setConfirmDeletePerson] = useState<string | null>(null);
+  const [memoryHashesByPerson, setMemoryHashesByPerson] = useState<Record<string, string[]>>({});
+  const [hashingMemoryPhotos, setHashingMemoryPhotos] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -30,24 +32,58 @@ const CameraPage = () => {
     };
   }, []);
 
-  // Build an extended people list that includes photo hashes from memories
-  const getPeopleWithMemoryHashes = useCallback(() => {
-    return people.map(p => {
-      // Gather image URLs from memories that mention this person
-      const memoryImages: string[] = [];
-      memories.forEach(m => {
-        if (m.people.includes(p.name) || m.summary.toLowerCase().includes(p.name.toLowerCase())) {
-          memoryImages.push(...m.image_urls);
+  useEffect(() => {
+    let active = true;
+
+    const buildMemoryHashes = async () => {
+      if (people.length === 0) {
+        if (active) {
+          setMemoryHashesByPerson({});
+          setHashingMemoryPhotos(false);
         }
-      });
-      return {
-        ...p,
-        // photo_hashes already includes camera photos; memory images are matched by URL overlap
-        photo_hashes: [...(p.photo_hashes || [])],
-        _memoryImageUrls: memoryImages,
-      };
-    });
+        return;
+      }
+
+      setHashingMemoryPhotos(true);
+      const next: Record<string, string[]> = {};
+
+      for (const person of people) {
+        const relatedImages = memories
+          .filter(m => m.people.includes(person.name) || m.summary.toLowerCase().includes(person.name.toLowerCase()))
+          .flatMap(m => m.image_urls);
+
+        const uniqueImages = [...new Set(relatedImages)].slice(0, 15);
+        if (uniqueImages.length === 0) {
+          next[person.id] = [];
+          continue;
+        }
+
+        const hashResults = await Promise.allSettled(uniqueImages.map(url => generatePerceptualHash(url)));
+        next[person.id] = hashResults
+          .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+          .map(result => result.value);
+      }
+
+      if (active) {
+        setMemoryHashesByPerson(next);
+        setHashingMemoryPhotos(false);
+      }
+    };
+
+    void buildMemoryHashes();
+
+    return () => {
+      active = false;
+    };
   }, [people, memories]);
+
+  // Build an extended people list that includes perceptual hashes from memories
+  const getPeopleWithMemoryHashes = useCallback(() => {
+    return people.map(person => ({
+      ...person,
+      photo_hashes: [...new Set([...(person.photo_hashes || []), ...(memoryHashesByPerson[person.id] || [])])],
+    }));
+  }, [people, memoryHashesByPerson]);
 
   const startCamera = useCallback(async (nextFacing?: 'user' | 'environment') => {
     if (streamRef.current) {
@@ -279,6 +315,9 @@ const CameraPage = () => {
           {/* Known People */}
           <GlassCard className="p-4">
             <h3 className="font-semibold mb-3">Known People ({people.length})</h3>
+            {hashingMemoryPhotos && (
+              <p className="text-xs text-muted-foreground mb-2">Indexing memory photos for recognition…</p>
+            )}
             {people.length === 0 ? (
               <p className="text-muted-foreground text-sm">No people added yet. Capture a photo to add someone.</p>
             ) : (
@@ -295,7 +334,7 @@ const CameraPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">{p.relationship} · {p.photo_hashes.length} photo(s)</p>
+                        <p className="text-xs text-muted-foreground">{p.relationship} · {new Set([...(p.photo_hashes || []), ...(memoryHashesByPerson[p.id] || [])]).size} face hash(es)</p>
                       </div>
                     </div>
                     <button onClick={() => handleDeletePerson(p.id)} className={`p-2 rounded-full min-w-[36px] min-h-[36px] flex items-center justify-center ${confirmDeletePerson === p.id ? 'text-destructive' : 'text-muted-foreground hover:text-destructive'}`}>
