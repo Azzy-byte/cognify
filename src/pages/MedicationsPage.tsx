@@ -138,6 +138,7 @@ const MedicationsPage = () => {
   const [frequency, setFrequency] = useState('daily');
   const [times, setTimes] = useState<string[]>(['08:00']);
   const [prescriber, setPrescriber] = useState('');
+  const [supplyQty, setSupplyQty] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmDeleteReminder, setConfirmDeleteReminder] = useState<string | null>(null);
 
