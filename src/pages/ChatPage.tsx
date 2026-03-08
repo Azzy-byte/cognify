@@ -9,7 +9,7 @@ import type { ChatMessage } from '@/types';
 
 interface AudioRecording {
   url: string;
-  blob: Blob;
+  dataUrl: string;
 }
 
 const ChatBubble = ({ msg, index }: { msg: ChatMessage; index: number }) => {
